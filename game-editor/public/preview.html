@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Game Preview</title>
+  <meta name="viewport" content="width=800, initial-scale=1.0" />
+  <style>
+    html, body { margin: 0; padding: 0; background: #222; }
+    #game-root { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+  </style>
+</head>
+<body>
+  <div id="game-root"></div>
+  <script type="module">
+    import { Application, Graphics } from "../node_modules/dist/pixi.js";
+    window.addEventListener('message', async (event) => {
+      if (event.data?.type === 'run-graph') {
+        const graphData = event.data.data;
+        // 简单解析节点图，查找 pixi/rect 节点并渲染
+        const app = new Application();
+        await app.init({ width: 640, height: 480, background: '#222' });
+        document.getElementById('game-root').appendChild(app.canvas);
+        if (graphData && graphData.nodes) {
+          for (const node of graphData.nodes) {
+            if (node.type === 'pixi/rect') {
+              const props = node.properties || {};
+              const g = new Graphics();
+              g.x = props.x || 0;
+              g.y = props.y || 0;
+              g.beginFill(props.color ? parseInt(props.color.replace('#', ''), 16) : 0xff0000);
+              g.drawRect(0, 0, props.width || 100, props.height || 100);
+              g.endFill();
+              app.stage.addChild(g);
+            }
+          }
+        }
+      }
+    });
+    // 可选：自动关闭时销毁所有资源
+    window.onunload = () => {
+      if (window.app && typeof window.app.destroy === 'function') window.app.destroy(true);
+    };
+  </script>
+</body>
+</html>
