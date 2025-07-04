@@ -1,0 +1,5 @@
+{
+  "name": "Button Click",
+  "category": "基础示例", 
+  "description": "交互式按钮案例，展示点击事件处理和计数器功能"
+}
