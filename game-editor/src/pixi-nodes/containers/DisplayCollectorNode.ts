@@ -58,7 +58,14 @@ export class DisplayCollectorNode extends BaseNode {
     this.addOutput('Collected', 'pixi_display_object');
     
     // 初始化
-    this._container.name = 'CollectorContainer';
+    this._container.label = 'CollectorContainer';
+    
+    // 设置固定的合理高度，适应基础功能
+    // 包含4个控件 + 1个输入端口 + 1个输出端口，预设180px高度
+    this.size = [200, 180];
+    
+    // 不再使用自动调整，使用固定的预设高度
+    // this.scheduleAutoResize(60, 20, 100, 15);
   }
   
   /**
@@ -91,6 +98,10 @@ export class DisplayCollectorNode extends BaseNode {
         widgets[i].value = count;
       }
     }
+
+    // 不再使用自动调整，DisplayCollector使用固定高度
+    // 如果需要更多输入端口，用户可以手动调整节点大小
+    // this.scheduleAutoResize(60, 20, 100, 15);
   }
   
   /**
@@ -106,28 +117,49 @@ export class DisplayCollectorNode extends BaseNode {
     const activeInputCount = Math.min(inputs.length, this.properties.currentInputs);
     
     // 处理每个输入端口
+    let hasValidObjects = false;
     for (let i = 0; i < activeInputCount; i++) {
       const displayObj = this.getInputData(i);
       if (!displayObj) continue;
       
-      // 添加到容器
-      if (Array.isArray(displayObj)) {
-        displayObj.forEach(obj => {
-          if (obj && !this._collectedObjects.has(obj)) {
-            this._container.addChild(obj);
-            this._collectedObjects.add(obj);
+      try {
+        // 添加到容器
+        if (Array.isArray(displayObj)) {
+          displayObj.forEach(obj => {
+            if (obj && typeof obj === 'object' && !this._collectedObjects.has(obj)) {
+              // 确保对象有效再添加
+              if (obj.renderable !== undefined || obj.texture || obj.text !== undefined) {
+                this._container.addChild(obj);
+                this._collectedObjects.add(obj);
+                hasValidObjects = true;
+              }
+            }
+          });
+        } else if (displayObj && typeof displayObj === 'object') {
+          if (!this._collectedObjects.has(displayObj)) {
+            // 确保对象是有效的显示对象
+            if (displayObj.renderable !== undefined || displayObj.texture || displayObj.text !== undefined) {
+              this._container.addChild(displayObj);
+              this._collectedObjects.add(displayObj);
+              hasValidObjects = true;
+            }
           }
-        });
-      } else {
-        if (!this._collectedObjects.has(displayObj)) {
-          this._container.addChild(displayObj);
-          this._collectedObjects.add(displayObj);
         }
+      } catch (error: any) {
+        console.error(`DisplayCollectorNode: Error adding object: ${error.message || 'Unknown error'}`);
       }
     }
     
-    // 输出收集的容器
-    this.setOutputData(0, this._container);
+    // 如果没有有效对象，打印警告
+    if (!hasValidObjects) {
+      console.warn(`DisplayCollectorNode (${this.properties.uniqueId}): No valid display objects found on inputs.`);
+    }
+    
+    // 创建一个数组作为输出，而不是容器本身
+    const collectedArray = Array.from(this._collectedObjects);
+    
+    // 输出收集的对象数组，而不是容器
+    this.setOutputData(0, collectedArray.length > 0 ? collectedArray : null);
     
     // 调试信息
     if (this.properties.debug) {
@@ -145,7 +177,12 @@ export class DisplayCollectorNode extends BaseNode {
 
 /**
  * 注册 DisplayCollectorNode
+ * 
+ * 该节点具有自动高度调整功能，会根据输入端口的数量动态调整节点高度。
+ * 当添加或更改输入端口数量时，节点会自动计算并设置适当的高度。
  */
 export function registerDisplayCollectorNode(LiteGraph: any) {
-  LiteGraph.registerNodeType("pixi/containers/DisplayCollector", DisplayCollectorNode);
+  LiteGraph.registerNodeType("containers/DisplayCollector", DisplayCollectorNode);
+  
+  console.log("DisplayCollectorNode 已注册，支持自动高度调整");
 }

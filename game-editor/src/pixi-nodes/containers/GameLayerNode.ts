@@ -71,10 +71,10 @@ export class GameLayerNode extends BaseNode {
    */
   initialize() {
     // 设置容器名称
-    this._entityContainer.name = 'EntityContainer';
-    this._effectContainer.name = 'EffectContainer';
-    this._backgroundContainer.name = 'BackgroundContainer';
-    this._container.name = 'GameLayerMainContainer';
+    this._entityContainer.label = 'EntityContainer';
+    this._effectContainer.label = 'EffectContainer';
+    this._backgroundContainer.label = 'BackgroundContainer';
+    this._container.label = 'GameLayerMainContainer';
     
     // 设置zIndex，值越大层级越高
     this._entityContainer.zIndex = 30;     // 最上层：游戏实体

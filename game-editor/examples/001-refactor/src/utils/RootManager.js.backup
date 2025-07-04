@@ -1,0 +1,1339 @@
+// 全局根管理器 - 重构为调度器模式
+class RootManager {
+    constructor() {
+        // 初始化管理器实例
+        this._initializeManagers();
+        
+        // 保留向后兼容的颜色数组（将逐步移除）
+        this.gameEggColors = this.colorManager.getGameEggColors();
+        this.bubbleColors = this.colorManager.getDecorativeColors();
+    }
+
+    /**
+     * 初始化所有管理器
+     * @private
+     */
+    _initializeManagers() {
+        // 确保全局配置存在
+        if (!window.gameConfig) {
+            // 如果没有全局配置，创建一个临时的
+            console.warn('RootManager: 全局配置未找到，创建临时配置');
+            window.gameConfig = {
+                colors: {
+                    gameEggs: [0xFF0000, 0xFFFF00, 0xFF69B4, 0x0066FF, 0x00FF00, 0x9933FF],
+                    decorative: [0xFF6B6B, 0x4ECDC4, 0x45B7D1, 0x96CEB4, 0xFECA57, 0xFF9FF3, 0x54A0FF, 0x5F27CD, 0x00D2D3, 0xFF6348]
+                },
+                animation: {
+                    fallingSpeed: { min: 4, max: 12 },
+                    gravity: 0.3,
+                    explosion: { particleCount: 8, radius: 50, duration: 1000 },
+                    elimination: { pulseDuration: 500, minAlpha: 0.3, maxAlpha: 1.0 }
+                }
+            };
+        }
+
+        // 初始化各个管理器
+        try {
+            // 检查管理器类是否可用
+            if (typeof window.ColorManager === 'function') {
+                this.colorManager = new window.ColorManager(window.gameConfig);
+            } else {
+                throw new Error('ColorManager 类未找到');
+            }
+            
+            if (typeof window.AnimationManager === 'function') {
+                this.animationManager = new window.AnimationManager(window.gameConfig);
+            } else {
+                console.warn('AnimationManager 类未找到，动画功能将降级');
+                this.animationManager = null;
+            }
+
+            // 初始化新的管理器
+            if (typeof window.RenderManager === 'function') {
+                this.renderManager = new window.RenderManager(window.gameConfig);
+                window.renderManager = this.renderManager; // 全局引用
+            } else {
+                console.warn('RenderManager 类未找到，渲染功能将降级');
+                this.renderManager = null;
+            }
+
+            if (typeof window.GameLogicManager === 'function') {
+                this.gameLogicManager = new window.GameLogicManager(window.gameConfig);
+                window.gameLogicManager = this.gameLogicManager; // 全局引用
+            } else {
+                console.warn('GameLogicManager 类未找到，游戏逻辑功能将降级');
+                this.gameLogicManager = null;
+            }
+
+            if (typeof window.SceneManager === 'function') {
+                this.sceneManager = new window.SceneManager(window.gameConfig);
+                window.sceneManager = this.sceneManager; // 全局引用
+            } else {
+                console.warn('SceneManager 类未找到，场景功能将降级');
+                this.sceneManager = null;
+            }
+
+            if (typeof window.ShooterManager === 'function') {
+                this.shooterManager = new window.ShooterManager(this);
+                this.shooterManager.setRootManager(this); // 确保引用设置
+                window.shooterManager = this.shooterManager; // 全局引用
+            } else {
+                console.warn('ShooterManager 类未找到，发射器功能将降级');
+                this.shooterManager = null;
+            }
+
+            if (typeof window.CollisionManager === 'function') {
+                this.collisionManager = new window.CollisionManager();
+                window.collisionManager = this.collisionManager; // 全局引用
+            } else {
+                console.warn('CollisionManager 类未找到，碰撞检测功能将降级');
+                this.collisionManager = null;
+            }
+
+            if (typeof window.EliminationManager === 'function') {
+                this.eliminationManager = new window.EliminationManager(this);
+                this.eliminationManager.setRootManager(this); // 确保引用设置
+                window.eliminationManager = this.eliminationManager; // 全局引用
+            } else {
+                console.warn('EliminationManager 类未找到，消除功能将降级');
+                this.eliminationManager = null;
+            }
+            
+            console.log('RootManager: 管理器初始化完成');
+        } catch (error) {
+            console.error('RootManager: 管理器初始化失败', error);
+            // 回退到原始实现
+            this._initializeFallback();
+        }
+    }
+
+    /**
+     * 回退初始化（当管理器加载失败时）
+     * @private
+     */
+    _initializeFallback() {
+        console.warn('RootManager: 使用回退模式');
+        this.colorManager = {
+            getGameEggColors: () => [0xFF0000, 0xFFFF00, 0xFF69B4, 0x0066FF, 0x00FF00, 0x9933FF],
+            getDecorativeColors: () => [0xFF6B6B, 0x4ECDC4, 0x45B7D1, 0x96CEB4, 0xFECA57, 0xFF9FF3],
+            getRandomGameEggColor: function() { 
+                const colors = this.getGameEggColors();
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+        };
+        this.animationManager = null;
+    }
+
+    // ===== 代理方法 - 转发到相应的管理器 =====
+
+    // RenderManager 代理方法
+    getRandomGameEggColor() {
+        return this.renderManager ? this.renderManager.getRandomGameEggColor() : this.colorManager.getRandomGameEggColor();
+    }
+
+    getGameEggColor(index) {
+        return this.renderManager ? this.renderManager.getGameEggColor(index) : this.colorManager.getGameEggColors()[index] || this.colorManager.getGameEggColors()[0];
+    }
+
+    getGameEggColors() {
+        return this.renderManager ? this.renderManager.getGameEggColors() : this.colorManager.getGameEggColors();
+    }
+
+    getEggColors() {
+        return this.getGameEggColors(); // 向后兼容
+    }
+
+    createBubble(x = 0, y = 0, color = null, radius = 20, interactive = false, hasHoverEffect = false) {
+        if (this.renderManager) {
+            return this.renderManager.createBubble(x, y, color, radius, interactive, hasHoverEffect);
+        } else {
+            // 回退实现
+            return this._createBubbleFallback(x, y, color, radius, interactive, hasHoverEffect);
+        }
+    }
+
+    getRandomBubbleColor() {
+        return this.renderManager ? this.renderManager.getRandomBubbleColor() : this.colorManager.getDecorativeColors()[Math.floor(Math.random() * this.colorManager.getDecorativeColors().length)];
+    }
+
+    createStep1Bubble(x = 0, y = 0, color = null, radius = 20) {
+        return this.renderManager ? this.renderManager.createStep1Bubble(x, y, color, radius) : this.createBubble(x, y, color, radius, false, false);
+    }
+
+    createShootingBubble(x = 0, y = 0, color = null, radius = 18) {
+        return this.renderManager ? this.renderManager.createShootingBubble(x, y, color, radius) : this.createBubble(x, y, color, radius, false, false);
+    }
+
+    createInteractiveBubble(x = 0, y = 0, color = null, radius = 20) {
+        return this.renderManager ? this.renderManager.createInteractiveBubble(x, y, color, radius) : this.createBubble(x, y, color, radius, true, true);
+    }
+
+    drawDashedLine(graphics, startX, startY, endX, endY, color = 0xFFFFFF, width = 2, dashLength = 10, gapLength = 5) {
+        if (this.renderManager) {
+            return this.renderManager.drawDashedLine(graphics, startX, startY, endX, endY, color, width, dashLength, gapLength);
+        } else {
+            return this._drawDashedLineFallback(graphics, startX, startY, endX, endY, color, width, dashLength, gapLength);
+        }
+    }
+
+    drawArrow(graphics, endX, endY, angle, color = 0xFFFFFF, length = 20, width = 3) {
+        if (this.renderManager) {
+            return this.renderManager.drawArrow(graphics, endX, endY, angle, color, length, width);
+        } else {
+            return this._drawArrowFallback(graphics, endX, endY, angle, color, length, width);
+        }
+    }
+
+    createEggShape(x = 0, y = 0, width = 60, height = 80, color = 0xFFFFFF, hasHighlight = true, rotation = 0) {
+        if (this.renderManager) {
+            return this.renderManager.createEggShape(x, y, width, height, color, hasHighlight, rotation);
+        } else {
+            return this._createEggShapeFallback(x, y, width, height, color, hasHighlight, rotation);
+        }
+    }
+
+    createShootingEffect(container, x, y, power = 1) {
+        if (this.renderManager) {
+            return this.renderManager.createShootingEffect(container, x, y, power);
+        } else {
+            return this._createShootingEffectFallback(container, x, y, power);
+        }
+    }
+
+    createExplosionEffect(container, x, y, options = {}) {
+        if (this.renderManager) {
+            return this.renderManager.createExplosionEffect(container, x, y, options);
+        } else {
+            return this._createExplosionEffectFallback(container, x, y);
+        }
+    }
+
+    // SceneManager 代理方法
+    createSceneContainer(options = {}) {
+        if (this.sceneManager) {
+            return this.sceneManager.createSceneContainer(options);
+        } else {
+            return this._createSceneContainerFallback(options);
+        }
+    }
+
+    createBubbleGameScene(config = {}) {
+        if (this.sceneManager) {
+            return this.sceneManager.createBubbleGameScene(config);
+        } else {
+            return this._createBubbleGameSceneFallback(config);
+        }
+    }
+
+    calculatePhysicsBounds(sceneConfig) {
+        if (this.sceneManager) {
+            return this.sceneManager.calculatePhysicsBounds(sceneConfig);
+        } else {
+            return this._calculatePhysicsBoundsFallback(sceneConfig);
+        }
+    }
+
+    // GameLogicManager 代理方法
+    checkAndMarkMatches(gridManager, row, col, minMatchCount = 3) {
+        if (this.gameLogicManager) {
+            return this.gameLogicManager.checkAndMarkMatches(gridManager, row, col, minMatchCount);
+        } else {
+            return this._checkAndMarkMatchesFallback(gridManager, row, col, minMatchCount);
+        }
+    }
+
+    processFloatingEggsRecursively(gridManager, container, options = {}) {
+        if (this.gameLogicManager) {
+            return this.gameLogicManager.processFloatingEggsRecursively(gridManager, container, options);
+        } else {
+            return this._processFloatingEggsRecursivelyFallback(gridManager, container, options);
+        }
+    }
+
+    processDirectFalling(gridManager, container, floatingEggs, options = {}) {
+        if (this.gameLogicManager) {
+            return this.gameLogicManager.processDirectFalling(gridManager, container, floatingEggs, options);
+        } else {
+            return this._processDirectFallingFallback(gridManager, container, floatingEggs, options);
+        }
+    }
+
+    clearAllEliminationMarkers(gridManager) {
+        if (this.gameLogicManager) {
+            return this.gameLogicManager.clearAllEliminationMarkers(gridManager);
+        } else {
+            return this._clearAllEliminationMarkersFallback(gridManager);
+        }
+    }
+
+    generateInitialEggs(gridManager, config) {
+        if (this.gameLogicManager) {
+            return this.gameLogicManager.generateInitialEggs(gridManager, config);
+        } else {
+            return this._generateInitialEggsFallback(gridManager, config);
+        }
+    }
+
+    createBubbleGameState(config) {
+        if (this.gameLogicManager) {
+            return this.gameLogicManager.createBubbleGameState(config);
+        } else {
+            return this._createBubbleGameStateFallback(config);
+        }
+    }
+
+    toggleGridDisplay(gridManager) {
+        if (this.gameLogicManager) {
+            return this.gameLogicManager.toggleGridDisplay(gridManager);
+        } else {
+            return this._toggleGridDisplayFallback(gridManager);
+        }
+    }
+
+    /**
+     * 获取游戏专用的随机蛋颜色（6种固定颜色）
+     * @returns {number} 颜色值
+     */
+    getRandomGameEggColor() {
+        return this.colorManager.getRandomGameEggColor();
+    }
+
+    /**
+     * 获取指定索引的游戏蛋颜色
+     * @param {number} index - 颜色索引 (0-5)
+     * @returns {number} 颜色值
+     */
+    getGameEggColor(index) {
+        return this.colorManager.getGameEggColor(index);
+    }
+
+    /**
+     * 获取游戏蛋颜色数组
+     * @returns {Array<number>} 游戏蛋颜色数组
+     */
+    getGameEggColors() {
+        return this.colorManager.getGameEggColors();
+    }
+
+    // 保留别名方法以兼容现有代码
+    getEggColors() {
+        return this.getGameEggColors();
+    }
+
+
+
+
+
+
+
+
+
+
+
+    /**
+     * 创建简化的瞄准线发射器组件（代理到ShooterManager）
+     * @param {Object} config - 发射器配置对象
+     * @param {number} config.x - 发射器X坐标，默认0
+     * @param {number} config.y - 发射器Y坐标，默认0
+     * @param {number} config.power - 发射力度(0-1)，0为不发射，1为容器边缘都可以到，默认1
+     * @param {number} config.maxDistance - 最大发射距离，默认自动计算（基于容器大小）
+     * @param {Object} config.containerSize - 容器大小信息 {width, height}，用于自动计算发射距离
+     * @param {Object} config.projectile - 发射物配置
+     * @param {number} config.projectile.color - 发射物颜色，默认白色
+     * @param {number} config.projectile.radius - 发射物半径，默认15
+     * @param {PIXI.DisplayObject} config.customProjectile - 自定义发射物对象
+     * @param {Object} config.physics - 物理系统配置
+     * @param {boolean} config.physics.usePhysics - 是否使用物理系统，默认true
+     * @param {Object} config.physics.params - 物理参数覆盖
+     * @param {Function} config.onAim - 瞄准时回调函数 (angle, targetX, targetY, power) => {}
+     * @param {Function} config.onShoot - 发射时回调函数 (projectile, velocity, power, physicsConfig) => {}
+     * @returns {Object} 发射器控制对象
+     */
+    createShooter(config = {}) {
+        // 代理到ShooterManager
+        if (this.shooterManager) {
+            return this.shooterManager.createShooter(config);
+        } else {
+            // 回退到基础实现
+            console.warn('RootManager: ShooterManager不可用，使用基础实现');
+            return this._createShooterFallback(config);
+        }
+    }
+
+    /**
+     * 发射器的基础回退实现
+     * @param {Object} config - 配置对象
+     * @returns {Object} 基础发射器对象
+     * @private
+     */
+    _createShooterFallback(config = {}) {
+        // 非常基础的发射器实现
+        const container = new PIXI.Container();
+        container.x = config.x || 0;
+        container.y = config.y || 0;
+
+        // 简单的发射器图形
+        const base = new PIXI.Graphics();
+        base.beginFill(0xFFFFFF, 0.8);
+        base.drawCircle(0, 0, 20);
+        base.endFill();
+        container.addChild(base);
+
+        return {
+            container: container,
+            setPosition: (x, y) => { container.x = x; container.y = y; },
+            setInteractiveArea: () => {},
+            updateCustomProjectile: () => {},
+            aim: () => {},
+            shoot: () => null,
+            stopAiming: () => {},
+            setPower: () => {},
+            getPower: () => 1,
+            getState: () => ({ isAiming: false, currentAngle: 0, currentPower: 1, position: { x: container.x, y: container.y } }),
+            destroy: () => container.destroy({ children: true }),
+            updateOnShootCallback: () => {}
+        };
+    }
+
+
+
+    /**
+     * 碰撞检测管理器代理方法
+     * @param {Object} config - 配置对象
+     * @returns {Object} 碰撞检测器对象
+     */
+    createCollisionDetector(config = {}) {
+        if (this.collisionManager) {
+            return this.collisionManager.createCollisionDetector(config);
+        } else {
+            console.warn('RootManager: CollisionManager不可用，使用简化实现');
+            return this._createCollisionDetectorFallback(config);
+        }
+    }
+
+    /**
+     * 创建完整的泡泡龙游戏场景
+     * @param {Object} config 配置对象
+     * @returns {Object} 包含所有游戏组件的对象
+     */
+    createBubbleGameScene(config = {}) {
+        const defaultConfig = {
+            // 场景容器配置
+            scene: {
+                x: 0,
+                y: 0,
+                width: 600,
+                height: 700,
+                title: '泡泡龙游戏',
+                background: {
+                    color: 0x2C3E50,
+                    alpha: 0.15,
+                    borderColor: 0xFFFFFF,
+                    borderWidth: 3,
+                    borderRadius: 0
+                }
+            },
+            // 网格配置
+            grid: {
+                rows: 12,
+                cols: 15,
+                eggRadius: 18,
+                startX: -270,
+                startY: -320,
+                showGrid: true,
+                gridColor: 0x888888,
+                gridAlpha: 0.3
+            },
+            // 发射器配置
+            shooter: {
+                x: 0,
+                y: 280,
+                power: 1,
+                maxDistance: 2000,
+                physics: {
+                    gravity: 0.08, // 稍微减少重力，从0.1减到0.08
+                    friction: 0.997, // 稍微减少阻力，从0.995增到0.997
+                    bounceX: 0.9,
+                    bounceY: 0.8,
+                    enableBounce: true
+                }
+            },
+            // 碰撞检测配置
+            collision: {
+                checkRadius: 36
+            },
+            // 初始蛋配置
+            initialEggs: {
+                rows: 2, // 顶部生成的行数
+                randomColors: true
+            }
+        };
+
+        // 合并配置
+        const finalConfig = {
+            scene: { ...defaultConfig.scene, ...(config.scene || {}) },
+            grid: { ...defaultConfig.grid, ...(config.grid || {}) },
+            shooter: { ...defaultConfig.shooter, ...(config.shooter || {}) },
+            collision: { ...defaultConfig.collision, ...(config.collision || {}) },
+            initialEggs: { ...defaultConfig.initialEggs, ...(config.initialEggs || {}) }
+        };
+
+        // 创建场景容器
+        const sceneContainer = this.createSceneContainer(finalConfig.scene);
+
+        // 创建网格管理器
+        const gridManager = new GridManager({
+            rows: finalConfig.grid.rows,
+            cols: finalConfig.grid.cols,
+            eggRadius: finalConfig.grid.eggRadius,
+            startX: finalConfig.grid.startX,
+            startY: finalConfig.grid.startY,
+            showGrid: finalConfig.grid.showGrid,
+            gridColor: finalConfig.grid.gridColor,
+            gridAlpha: finalConfig.grid.gridAlpha
+        });
+
+        // 初始化网格容器并添加到场景中
+        gridManager.createGridContainer(sceneContainer.addLayer);
+
+        // 生成初始蛋
+        this.generateInitialEggs(gridManager, finalConfig.initialEggs);
+
+        // 设置物理系统边界
+        const bounds = this.calculatePhysicsBounds(finalConfig.scene);
+        window.physicsManager.setBounds(bounds.left, bounds.right, bounds.top, bounds.bottom);
+
+        // 创建发射器
+        const shooterConfig = {
+            x: finalConfig.shooter.x,
+            y: finalConfig.shooter.y,
+            power: finalConfig.shooter.power,
+            maxDistance: finalConfig.shooter.maxDistance,
+            containerSize: { 
+                width: finalConfig.scene.width, 
+                height: finalConfig.scene.height 
+            },
+            customProjectile: null,
+            projectile: {
+                color: 0xFF6B6B,
+                radius: finalConfig.grid.eggRadius
+            },
+            physics: {
+                usePhysics: true,
+                params: finalConfig.shooter.physics
+            },
+            onShoot: null // 稍后设置
+        };
+
+        const shooter = this.createShooter(shooterConfig);
+        sceneContainer.addLayer.addChild(shooter.container);
+        shooter.setInteractiveArea(sceneContainer.backgroundLayer);
+
+        // 创建游戏状态管理器
+        const gameState = this.createBubbleGameState({
+            gridManager: gridManager,
+            shooter: shooter,
+            sceneContainer: sceneContainer,
+            collisionConfig: finalConfig.collision
+        });
+
+        // 设置发射器回调来使用游戏状态管理
+        if (shooter.updateOnShootCallback) {
+            shooter.updateOnShootCallback((projectile, velocity, power, physicsConfig) => {
+                // 将发射物添加到场景中
+                sceneContainer.addLayer.addChild(projectile);
+                console.log('发射蛋! 颜色:', projectile.eggGameColor?.toString(16) || '未知');
+                
+                // 使用物理系统处理发射物运动
+                if (physicsConfig.usePhysics && window.physicsManager) {
+                    const projectileId = window.physicsManager.addProjectile({
+                        projectile: projectile,
+                        velocity: velocity,
+                        power: power,
+                        physics: physicsConfig.params
+                    });
+                    
+                    // 记录活跃的发射物
+                    gameState.activeProjectiles.push({ 
+                        id: projectileId, 
+                        object: projectile 
+                    });
+                    
+                    console.log('发射物已添加到物理系统，ID:', projectileId);
+                }
+                
+                // 发射后立即准备下一个随机颜色的蛋
+                gameState.prepareNextProjectile();
+            });
+        }
+
+        return {
+            sceneContainer: sceneContainer,
+            gridManager: gridManager,
+            shooter: shooter,
+            gameState: gameState,
+            config: finalConfig
+        };
+    }
+
+    /**
+     * 计算物理系统边界
+     * @param {Object} sceneConfig 场景配置
+     * @returns {Object} 边界对象
+     */
+    calculatePhysicsBounds(sceneConfig) {
+        const { width, height } = sceneConfig;
+        return {
+            left: -width / 2,
+            right: width / 2,
+            top: -height / 2,
+            bottom: height / 2
+        };
+    }
+
+    /**
+     * 生成初始网格蛋
+     * @param {GridManager} gridManager 网格管理器
+     * @param {Object} config 初始蛋配置
+     */
+    generateInitialEggs(gridManager, config) {
+        const gameColors = this.getGameEggColors();
+        
+        for (let row = 0; row < config.rows; row++) {
+            const colCount = (row % 2 === 0) ? gridManager.config.cols : gridManager.config.cols - 1;
+            
+            for (let col = 0; col < colCount; col++) {
+                let eggColor;
+                if (config.randomColors) {
+                    eggColor = gameColors[Math.floor(Math.random() * gameColors.length)];
+                } else {
+                    eggColor = gameColors[col % gameColors.length];
+                }
+                gridManager.createAndAddEgg(row, col, eggColor);
+            }
+        }
+        
+        console.log(`生成了${config.rows}行初始蛋，总网格: ${gridManager.config.rows}x${gridManager.config.cols}`);
+    }
+
+    /**
+     * 创建泡泡龙游戏状态管理器
+     * @param {Object} config 配置对象
+     * @returns {Object} 游戏状态管理器
+     */
+    createBubbleGameState(config) {
+        const { gridManager, shooter, sceneContainer, collisionConfig } = config;
+        
+        const activeProjectiles = []; // 追踪活跃发射物
+        let isActive = true;
+        let collisionDetector = null;
+
+        // 准备下一个发射物的方法
+        const prepareNextProjectile = () => {
+            if (shooter) {
+                const nextColor = this.getRandomGameEggColor();
+                const nextProjectile = this.createEggShape(0, 0, 28.8, 36, nextColor, true, 0);
+                nextProjectile.radius = 18;
+                nextProjectile.eggGameColor = nextColor;
+                nextProjectile.bubbleColor = nextColor;
+                nextProjectile.eggWidth = 28.8;
+                nextProjectile.eggHeight = 36;
+                nextProjectile.hasHighlight = true;
+                
+                if (shooter.updateCustomProjectile) {
+                    shooter.updateCustomProjectile(nextProjectile);
+                    console.log('下一个发射蛋准备完成，颜色:', nextColor.toString(16));
+                }
+            }
+        };
+
+        // 创建碰撞检测器
+        collisionDetector = this.createCollisionDetector({
+            gridManager: gridManager,
+            checkRadius: collisionConfig.checkRadius,
+            onCollision: (projectile, collisionInfo) => {
+                console.log(`检测到碰撞！发射物与网格(${collisionInfo.row}, ${collisionInfo.col})碰撞`);
+                
+                // 找到对应的发射物记录
+                const projectileRecord = activeProjectiles.find(p => p.object === projectile);
+                if (projectileRecord) {
+                    // 停止物理行为
+                    collisionDetector.stopProjectilePhysics(projectile, projectileRecord.id);
+                    
+                    // 将发射物附加到网格
+                    collisionDetector.attachToGrid(projectile, collisionInfo);
+                    
+                    // 从活跃发射物列表中移除
+                    const index = activeProjectiles.indexOf(projectileRecord);
+                    if (index > -1) {
+                        activeProjectiles.splice(index, 1);
+                        console.log(`发射物已从活跃列表移除，剩余: ${activeProjectiles.length}`);
+                    }
+                    
+                    // 准备下一个发射物
+                    prepareNextProjectile();
+                }
+            }
+        });
+
+        // 启动碰撞检测循环
+        const startCollisionDetection = () => {
+            const checkCollisions = () => {
+                if (activeProjectiles.length > 0) {
+                    activeProjectiles.forEach(projectileRecord => {
+                        if (projectileRecord.object && projectileRecord.object.parent) {
+                            // 使用返回对象中的当前碰撞检测器，而不是闭包中的固定引用
+                            gameStateObject.collisionDetector.checkCollision(projectileRecord.object);
+                        }
+                    });
+                }
+                
+                if (isActive) {
+                    requestAnimationFrame(checkCollisions);
+                }
+            };
+            requestAnimationFrame(checkCollisions);
+        };
+
+        // 初始化第一个发射物
+        prepareNextProjectile();
+        
+        // 创建返回对象
+        const gameStateObject = {
+            activeProjectiles: activeProjectiles,
+            collisionDetector: collisionDetector,
+            prepareNextProjectile: prepareNextProjectile,
+            isActive: () => isActive,
+            setActive: (active) => { isActive = active; },
+            
+            // 注册发射回调
+            registerShootCallback: (callback) => {
+                // 这个方法可以用来在发射时执行自定义逻辑
+                const originalCallback = callback;
+                return (projectile, velocity, power, physicsConfig) => {
+                    // 执行原始回调
+                    if (originalCallback) {
+                        originalCallback(projectile, velocity, power, physicsConfig);
+                    }
+                    
+                    // 添加到活跃发射物列表
+                    if (physicsConfig.usePhysics && window.physicsManager) {
+                        const projectileId = window.physicsManager.addProjectile({
+                            projectile: projectile,
+                            velocity: velocity,
+                            power: power,
+                            physics: physicsConfig.params
+                        });
+                        
+                        activeProjectiles.push({ 
+                            id: projectileId, 
+                            object: projectile 
+                        });
+                        
+                        console.log('发射物已添加到游戏状态管理，ID:', projectileId);
+                    }
+                    
+                    // 准备下一个发射物
+                    prepareNextProjectile();
+                };
+            },
+
+            // 销毁方法
+            destroy: () => {
+                isActive = false;
+                
+                // 清理活跃发射物
+                activeProjectiles.forEach(projectileRecord => {
+                    if (window.physicsManager && projectileRecord.id) {
+                        window.physicsManager.removeProjectile(projectileRecord.id);
+                    }
+                });
+                activeProjectiles.length = 0;
+                
+                if (collisionDetector) {
+                    collisionDetector.destroy();
+                    collisionDetector = null;
+                }
+            }
+        };
+        
+        // 启动碰撞检测
+        startCollisionDetection();
+        
+        return gameStateObject;
+    }
+
+    /**
+     * 根据世界坐标找到最近的空闲六边形网格位置
+     * @param {GridManager} gridManager - 网格管理器实例
+     * @param {number} worldX - 目标点的世界X坐标
+     * @param {number} worldY - 目标点的世界Y坐标
+     * @returns {{row: number, col: number}|null} 最近的空闲位置或null
+     */
+    findNearestEmptyGridPosition(gridManager, worldX, worldY) {
+        if (!gridManager) return null;
+
+        // 1. 将世界坐标转换为最接近的网格坐标
+        const idealGridPos = gridManager.calculateGridCoordinates(worldX, worldY);
+        const startRow = idealGridPos.row;
+        const startCol = idealGridPos.col;
+
+        // 2. 检查这个理想位置是否有效且为空
+        if (gridManager.isValid(startRow, startCol) && gridManager.isEmpty(startRow, startCol)) {
+            return { row: startRow, col: startCol };
+        }
+
+        // 3. 如果不为空，则从该点开始进行广度优先搜索 (BFS) 寻找最近的空位
+        const queue = [{ row: startRow, col: startCol }];
+        const visited = new Set([`${startRow},${startCol}`]);
+
+        while (queue.length > 0) {
+            const { row, col } = queue.shift();
+
+            // 定义六边形邻居的相对坐标
+            const isEvenRow = row % 2 === 0;
+            const neighbors = [
+                { dr: 0, dc: -1 }, { dr: 0, dc: 1 }, // 左、右
+                { dr: -1, dc: 0 }, { dr: 1, dc: 0 },   // 上、下
+                { dr: -1, dc: isEvenRow ? -1 : 1 }, // 左上、右上
+                { dr: 1, dc: isEvenRow ? -1 : 1 }  // 左下、右下
+            ];
+
+            for (const n of neighbors) {
+                const newRow = row + n.dr;
+                const newCol = col + n.dc;
+                const key = `${newRow},${newCol}`;
+
+                if (gridManager.isValid(newRow, newCol) && !visited.has(key)) {
+                    // 如果找到空位置，立即返回
+                    if (gridManager.isEmpty(newRow, newCol)) {
+                        return { row: newRow, col: newCol };
+                    }
+                    visited.add(key);
+                    queue.push({ row: newRow, col: newCol });
+                }
+            }
+        }
+
+        // 如果没有找到任何空位置
+        console.warn("在附近没有找到任何空网格位置。");
+        return null;
+    }
+
+    /**
+     * 在碰撞蛋周围寻找空位置（泡泡龙逻辑）
+     * @param {GridManager} gridManager - 网格管理器实例
+     * @param {number} collisionRow - 碰撞蛋的行
+     * @param {number} collisionCol - 碰撞蛋的列
+     * @param {number} projectileX - 发射物的X坐标
+     * @param {number} projectileY - 发射物的Y坐标
+     * @returns {{row: number, col: number}|null} 最适合的空位置或null
+     */
+    findEmptyPositionAroundCollision(gridManager, collisionRow, collisionCol, projectileX, projectileY) {
+        if (!gridManager) return null;
+
+        // 获取六边形网格的邻居位置
+        const neighbors = this.getHexNeighbors(collisionRow, collisionCol);
+        
+        let bestPosition = null;
+        let shortestDistance = Infinity;
+
+        // 检查所有邻居位置
+        for (const neighbor of neighbors) {
+            const { row, col } = neighbor;
+            
+            // 检查位置是否有效且为空
+            if (gridManager.isValid(row, col) && gridManager.isEmpty(row, col)) {
+                // 计算与发射物当前位置的距离
+                const gridPos = gridManager.calculateGridPosition(row, col);
+                const dx = projectileX - gridPos.x;
+                const dy = projectileY - gridPos.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // 选择距离最近的空位
+                if (distance < shortestDistance) {
+                    shortestDistance = distance;
+                    bestPosition = { row, col };
+                }
+            }
+        }
+
+        if (bestPosition) {
+            console.log(`在碰撞蛋(${collisionRow}, ${collisionCol})周围找到空位: (${bestPosition.row}, ${bestPosition.col})`);
+            return bestPosition;
+        }
+
+        // 如果直接邻居都满了，扩展搜索范围
+        console.log(`碰撞蛋(${collisionRow}, ${collisionCol})周围无空位，扩展搜索...`);
+        return this.findNearestEmptyGridPosition(gridManager, projectileX, projectileY);
+    }
+
+    /**
+     * 获取六边形网格中指定位置的所有邻居坐标
+     * @param {number} row - 行索引
+     * @param {number} col - 列索引
+     * @returns {Array} 邻居位置数组 [{row, col}, ...]
+     */
+    getHexNeighbors(row, col) {
+        const isEvenRow = row % 2 === 0;
+        
+        // 六边形网格的邻居偏移量
+        const offsets = [
+            { dr: 0, dc: -1 }, // 左
+            { dr: 0, dc: 1 },  // 右
+            { dr: -1, dc: 0 }, // 上
+            { dr: 1, dc: 0 },  // 下
+            { dr: -1, dc: isEvenRow ? -1 : 1 }, // 左上/右上
+            { dr: 1, dc: isEvenRow ? -1 : 1 }   // 左下/右下
+        ];
+        
+        return offsets.map(offset => ({
+            row: row + offset.dr,
+            col: col + offset.dc
+        }));
+    }
+
+
+
+
+
+
+
+
+
+    /**
+     * 执行蛋的掉落动画
+     * @param {Array} fallingEggs 掉落的蛋数组
+     * @param {GridManager} gridManager 网格管理器
+     * @param {PIXI.Container} container 场景容器
+     * @param {Function} onComplete 完成回调
+     */
+    animateFallingEggs(fallingEggs, gridManager, container, onComplete = null) {
+        if (fallingEggs.length === 0) {
+            if (onComplete) onComplete([]);
+            return;
+        }
+        
+        const fallingPromises = [];
+        const bottomY = 350; // 底部位置
+        
+        fallingEggs.forEach(({row, col, egg}) => {
+            // 暂时不从网格中移除蛋，等动画完成后再移除
+            // 只是标记这个蛋正在掉落，避免重复处理
+            if (egg) {
+                egg.isFalling = true;
+            }
+            
+            // 确保蛋对象有效且未被销毁
+            if (!egg || egg.destroyed) {
+                console.warn(`蛋 (${row}, ${col}) 已被销毁，跳过掉落动画`);
+                return;
+            }
+            
+            // 创建掉落动画的Promise
+            const fallingPromise = new Promise((resolve) => {
+                // 添加重力效果
+                let velocityY = 0;
+                const gravity = 0.8;
+                let hasCollided = false;
+                
+                const fallAnimation = () => {
+                    // 检查蛋是否仍然有效
+                    if (!egg || egg.destroyed || !egg.parent) {
+                        console.warn(`蛋 (${row}, ${col}) 在动画过程中被销毁或移除`);
+                        resolve({row, col, egg: null});
+                        return;
+                    }
+                    
+                    // 再次检查蛋对象的属性是否可访问
+                    try {
+                        // 测试访问蛋的属性
+                        const testY = egg.y;
+                        const testX = egg.x;
+                        
+                        velocityY += gravity;
+                        egg.y += velocityY;
+                        
+                        // 检查是否到达底部
+                        if (egg.y >= bottomY && !hasCollided) {
+                            hasCollided = true;
+                            egg.y = bottomY;
+                            
+                            // 在爆炸前从网格中移除蛋
+                            if (gridManager.grid[row] && gridManager.grid[row][col] === egg) {
+                                gridManager.grid[row][col] = null;
+                            }
+                            
+                            // 创建爆炸效果
+                            this.createExplosionEffect(container, egg.x, egg.y);
+                            
+                            // 移除蛋
+                            if (egg.parent) {
+                                egg.parent.removeChild(egg);
+                            }
+                            egg.destroy();
+                            
+                            console.log(`蛋 (${row}, ${col}) 掉落并爆炸`);
+                            resolve({row, col, egg});
+                        } else if (!hasCollided) {
+                            requestAnimationFrame(fallAnimation);
+                        }
+                    } catch (error) {
+                        console.warn(`蛋 (${row}, ${col}) 访问属性时出错:`, error.message);
+                        resolve({row, col, egg: null});
+                        return;
+                    }
+                };
+                
+                requestAnimationFrame(fallAnimation);
+            });
+            
+            fallingPromises.push(fallingPromise);
+        });
+        
+        // 等待所有蛋掉落完成
+        Promise.all(fallingPromises).then((results) => {
+            // 过滤掉null结果
+            const validResults = results.filter(result => result.egg !== null);
+            console.log(`${validResults.length} 个蛋掉落完成`);
+            
+            // 清理所有剩余蛋的isFalling标记
+            this.clearFallingFlags(gridManager);
+            
+            if (onComplete) onComplete(validResults);
+        });
+    }
+
+    /**
+     * 创建爆炸效果
+     * @param {PIXI.Container} container 容器
+     * @param {number} x X坐标
+     * @param {number} y Y坐标
+     * @param {Object} options 爆炸选项
+     */
+    createExplosionEffect(container, x, y, options = {}) {
+        if (this.animationManager) {
+            return this.animationManager.createExplosionEffect(container, x, y, options);
+        } else {
+            // 回退到原始实现
+            return this._createExplosionEffectFallback(container, x, y);
+        }
+    }
+
+    /**
+     * 爆炸效果回退实现（当 AnimationManager 不可用时）
+     * @private
+     */
+    _createExplosionEffectFallback(container, x, y) {
+        const particleCount = 8;
+        const colors = [0xFF6B6B, 0xFFE66D, 0xFF8E53, 0xA8E6CF, 0x88D8C0];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = new PIXI.Graphics();
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const size = Math.random() * 8 + 4;
+            
+            particle.beginFill(color, 0.8);
+            particle.drawCircle(0, 0, size);
+            particle.endFill();
+            
+            particle.x = x;
+            particle.y = y;
+            
+            container.addChild(particle);
+            
+            // 粒子动画
+            const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.5;
+            const speed = Math.random() * 8 + 4;
+            let velocityX = Math.cos(angle) * speed;
+            let velocityY = Math.sin(angle) * speed;
+            const gravity = 0.3;
+            let life = 1.0;
+            
+            const animateParticle = () => {
+                velocityY += gravity;
+                particle.x += velocityX;
+                particle.y += velocityY;
+                
+                life -= 0.03;
+                particle.alpha = life;
+                particle.scale.set(life);
+                
+                if (life > 0) {
+                    requestAnimationFrame(animateParticle);
+                } else {
+                    container.removeChild(particle);
+                    particle.destroy();
+                }
+            };
+            
+            requestAnimationFrame(animateParticle);
+        }
+        return `fallback_explosion_${Date.now()}`;
+    }
+
+    /**
+     * 完整的消除和掉落处理
+     * @param {GridManager} gridManager 网格管理器
+     * @param {number} row 触发位置行
+     * @param {number} col 触发位置列
+     * @param {PIXI.Container} container 场景容器
+     * @param {Function} onComplete 完成回调
+     * @returns {Object} 处理结果
+     */
+    processEliminationAndFalling(gridManager, row, col, container, onComplete = null) {
+        console.log(`开始处理消除和掉落，触发位置: (${row}, ${col})`);
+        
+        // 1. 检查匹配并标记
+        const matchResult = this.checkAndMarkMatches(gridManager, row, col, 3);
+        
+        if (!matchResult.matched) {
+            console.log('没有找到可消除的匹配');
+            if (onComplete) onComplete({eliminated: [], fallen: []});
+            return {eliminated: [], fallen: []};
+        }
+        
+        // 2. 等待标记动画，然后消除
+        setTimeout(() => {
+            const eliminatedEggs = this.eliminateMarkedEggs(matchResult.eggs, gridManager);
+            
+            // 3. 检测掉落
+            const fallingEggs = this.detectFallingEggs(gridManager);
+            
+            // 4. 执行掉落动画
+            this.animateFallingEggs(fallingEggs, gridManager, container, (fallenResults) => {
+                const result = {
+                    eliminated: eliminatedEggs,
+                    fallen: fallenResults
+                };
+                
+                console.log(`消除和掉落处理完成: 消除${eliminatedEggs.length}个, 掉落${fallenResults.length}个`);
+                
+                if (onComplete) onComplete(result);
+            });
+            
+        }, 1000); // 等待1秒让玩家看到标记
+    }
+
+    /**
+     * 直接掉落匹配的蛋（不标记，直接掉落）
+     * @param {GridManager} gridManager 网格管理器
+     * @param {number} row 触发位置行
+     * @param {number} col 触发位置列
+     * @param {PIXI.Container} container 场景容器
+     * @param {Function} onComplete 完成回调
+     * @returns {Object} 处理结果
+     */
+    processDirectFalling(gridManager, row, col, container, onComplete = null) {
+        console.log(`开始处理直接掉落，触发位置: (${row}, ${col})`);
+        
+        // 1. 检查匹配但不标记
+        const startEgg = gridManager.grid[row][col];
+        if (!startEgg || !startEgg.eggGameColor) {
+            console.log('没有找到有效的起始蛋');
+            if (onComplete) onComplete({fallen: []});
+            return {fallen: []};
+        }
+        
+        // 2. 查找连接的同色蛋
+        const connectedEggs = this.findConnectedEggs(gridManager, row, col, startEgg.eggGameColor);
+        
+        if (connectedEggs.length < 3) {
+            console.log(`只有${connectedEggs.length}个连接的蛋，不足以触发掉落`);
+            if (onComplete) onComplete({fallen: []});
+            return {fallen: []};
+        }
+        
+        console.log(`找到${connectedEggs.length}个连接的颜色${startEgg.eggGameColor.toString(16)}蛋，开始直接掉落`);
+        
+        // 3. 直接让匹配的蛋掉落（不消除，不标记）
+        this.animateFallingEggs(connectedEggs, gridManager, container, (fallenResults) => {
+            console.log(`初始匹配蛋掉落完成: 掉落${fallenResults.length}个`);
+            
+            // 4. 暂时禁用自动悬空检测，只使用手动检测
+            // setTimeout(() => {
+            //     console.log('开始检查悬空蛋...');
+            //     this.processFloatingEggsRecursively(gridManager, container, (allFloatingResults) => {
+            //         const result = {
+            //             fallen: [...fallenResults, ...allFloatingResults]
+            //         };
+            //         
+            //         const totalFallen = result.fallen.length;
+            //         console.log(`直接掉落处理完全完成: 总共掉落${totalFallen}个蛋`);
+            //         
+            //         if (onComplete) onComplete(result);
+            //     });
+            // }, 800); // 增加等待时间，确保初始掉落动画完全完成
+            
+            // 直接完成，不进行自动悬空检测
+            const result = {
+                fallen: fallenResults
+            };
+            
+            console.log(`直接掉落处理完成: 掉落${fallenResults.length}个蛋（暂未检测悬空）`);
+            
+            if (onComplete) onComplete(result);
+        });
+        
+        return {fallen: connectedEggs};
+    }
+
+    /**
+     * 递归处理所有悬空蛋的掉落
+     * @param {GridManager} gridManager 网格管理器
+     * @param {PIXI.Container} container 场景容器
+     * @param {Function} onComplete 完成回调
+     * @param {Array} allFallenResults 累积掉落结果
+     */
+    processFloatingEggsRecursively(gridManager, container, onComplete, allFallenResults = []) {
+        const floatingEggs = this.findFloatingEggs(gridManager);
+        
+        if (floatingEggs.length === 0) {
+            console.log('没有更多悬空蛋，连锁掉落完成');
+            if (onComplete) onComplete(allFallenResults);
+            return;
+        }
+        
+        console.log(`处理${floatingEggs.length}个悬空蛋的掉落`);
+        
+        // 让悬空蛋掉落
+        this.animateFallingEggs(floatingEggs, gridManager, container, (fallenResults) => {
+            // 累积掉落结果
+            allFallenResults.push(...fallenResults);
+            
+            // 递归检查是否还有新的悬空蛋
+            setTimeout(() => {
+                this.processFloatingEggsRecursively(gridManager, container, onComplete, allFallenResults);
+            }, 800); // 增加时间让动画完全完成
+        });
+    }
+
+    /**
+     * 清理网格中所有蛋的掉落标记
+     * @param {GridManager} gridManager 网格管理器
+     */
+    clearFallingFlags(gridManager) {
+        if (!gridManager || !gridManager.grid) return;
+        
+        console.log('清理所有蛋的掉落标记...');
+        let clearedCount = 0;
+        
+        for (let row = 0; row < gridManager.config.rows; row++) {
+            for (let col = 0; col < gridManager.config.cols; col++) {
+                const egg = gridManager.grid[row] && gridManager.grid[row][col];
+                if (egg && egg.isFalling) {
+                    egg.isFalling = false;
+                    clearedCount++;
+                }
+            }
+        }
+        
+        console.log(`清理了 ${clearedCount} 个蛋的掉落标记`);
+    }
+
+    /**
+     * findConnectedEggs代理方法 - 首先尝试GameLogicManager，失败则使用fallback
+     */
+    findConnectedEggs(gridManager, startRow, startCol, targetColor) {
+        try {
+            // 首先尝试使用GameLogicManager
+            if (this.gameLogicManager && this.gameLogicManager.findConnectedEggs) {
+                return this.gameLogicManager.findConnectedEggs(gridManager, startRow, startCol, targetColor);
+            }
+        } catch (e) {
+            console.warn('GameLogicManager.findConnectedEggs failed, using fallback:', e);
+        }
+        
+        // 使用fallback实现
+        return this._findConnectedEggsFallback(gridManager, startRow, startCol, targetColor);
+    }
+
+    /**
+     * findConnectedEggs的fallback实现
+     * @private
+     */
+    _findConnectedEggsFallback(gridManager, startRow, startCol, targetColor) {
+        if (!gridManager || !gridManager.grid) return [];
+        
+        const visited = new Set();
+        const connected = [];
+        const queue = [{row: startRow, col: startCol}];
+        
+        while (queue.length > 0) {
+            const {row, col} = queue.shift();
+            const key = `${row}-${col}`;
+            
+            if (visited.has(key)) continue;
+            visited.add(key);
+            
+            // 检查边界
+            if (row < 0 || row >= gridManager.config.rows || 
+                col < 0 || col >= gridManager.config.cols) continue;
+            
+            // 获取当前位置的蛋
+            const egg = gridManager.grid[row][col];
+            if (!egg || !egg.eggGameColor) continue;
+            
+            // 检查颜色是否匹配
+            if (egg.eggGameColor !== targetColor) continue;
+            
+            // 添加到连接列表
+            connected.push({row, col, egg});
+            
+            // 添加邻居到队列（使用六边形邻居）
+            const neighbors = this.getHexNeighbors(row, col);
+            for (const neighbor of neighbors) {
+                const neighborKey = `${neighbor.row}-${neighbor.col}`;
+                if (!visited.has(neighborKey)) {
+                    queue.push(neighbor);
+                }
+            }
+        }
+        
+        return connected;
+    }
+
+    /**
+     * 碰撞检测器的简化fallback实现
+     * @private
+     */
+    _createCollisionDetectorFallback(config = {}) {
+        const defaultConfig = {
+            gridManager: null,
+            checkRadius: 36,
+            onCollision: null
+        };
+        
+        const finalConfig = { ...defaultConfig, ...config };
+        
+        return {
+            checkCollision: (projectile) => {
+                if (!finalConfig.gridManager || !projectile) return null;
+                
+                // 简化的碰撞检测
+                for (let row = 0; row < finalConfig.gridManager.config.rows; row++) {
+                    for (let col = 0; col < finalConfig.gridManager.config.cols; col++) {
+                        const egg = finalConfig.gridManager.grid[row] && finalConfig.gridManager.grid[row][col];
+                        if (egg) {
+                            const distance = Math.sqrt(
+                                Math.pow(projectile.x - egg.x, 2) + 
+                                Math.pow(projectile.y - egg.y, 2)
+                            );
+                            
+                            if (distance < finalConfig.checkRadius) {
+                                return { row, col, egg, distance };
+                            }
+                        }
+                    }
+                }
+                return null;
+            },
+            stopProjectilePhysics: () => {},
+            attachToGrid: () => {},
+            destroy: () => {}
+        };
+    }
+}
+
+// 创建全局单例实例
+window.rootManager = new RootManager();

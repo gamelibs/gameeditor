@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>蛋蛋射击</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="loading-screen">
+            <div class="loading-logo">🥚</div>
+            <div class="loading-text">加载中...</div>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pixi.js Library (use local file for stability) -->
+    <script src="lib/pixi.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/20.0.3/tween.umd.js"></script>
+    
+    <!-- Game Source Files -->
+    <script src="src/utils/constants.js"></script>
+    <script src="src/utils/math.js"></script>
+    
+    <!-- New Manager Architecture -->
+    <script src="src/utils/shared/GameConfig.js"></script>
+    <script src="src/utils/shared/GameConstants.js"></script>
+    <script src="src/utils/managers/ColorManager.js"></script>
+    <script src="src/utils/managers/AnimationManager.js"></script>
+    <script src="src/utils/managers/RenderManager.js"></script>
+    <script src="src/utils/managers/GameLogicManager.js"></script>
+    <script src="src/utils/managers/SceneManager.js"></script>
+    <script src="src/utils/managers/ShooterManager.js"></script>
+    <script src="src/utils/managers/CollisionManager.js"></script>
+    <script src="src/utils/managers/EliminationManager.js"></script>
+    
+    <!-- Core Managers -->
+    <script src="src/utils/RootManager.js"></script>
+    <script src="src/utils/GridManager.js"></script>
+    <script src="src/utils/PhysicsManager.js"></script>
+    <script src="src/systems/AssetLoader.js"></script>
+    <script src="src/systems/AudioManager.js"></script>
+    <script src="src/systems/InputManager.js"></script>
+    <script src="src/entities/Bubble.js"></script>
+    <script src="src/entities/Grid.js"></script>
+    <script src="src/entities/Shooter.js"></script>
+    <script src="src/scenes/LoadingScene.js"></script>
+    <script src="src/scenes/MenuScene.js"></script>
+    <script src="src/scenes/GameScene.js"></script>
+    
+    <!-- Test Modules -->
+    <script src="src/test/BaseTestModule.js"></script>
+    <script src="src/test/Step1TestModule.js"></script>
+    <script src="src/test/Step2TestModule.js"></script>
+    <script src="src/test/Step3TestModule.js"></script>
+    <script src="src/test/Step4TestModule.js"></script>
+    <script src="src/test/Step5TestModule.js"></script>
+    <script src="src/test/Step6TestModule.js"></script>
+    <script src="src/test/Step7TestModule.js"></script>
+    <script src="src/test/Step8TestModule.js"></script>
+    <script src="src/test/TestModuleManager.js"></script>
+    
+    <script src="src/scenes/TestScene.js"></script>
+    <script src="src/Game.js"></script>
+    <script src="src/main.js"></script>
+</body>
+</html>

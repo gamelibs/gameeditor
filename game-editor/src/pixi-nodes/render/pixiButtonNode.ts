@@ -1,13 +1,13 @@
 // PixiButtonNode: 可接收音频资源别名，点击时播放音频，显示为灰色按钮
 import { Graphics, Text, Container, Sprite, Texture } from 'pixi.js';
-import { NodeColors, NodeSizes } from '../../nodesConfig';
+import { NodeColors } from '../../nodesConfig';
 import { Logger } from '../../pixiNodeLogger';
 import { PixiResourceManager } from '../logic/pixiResourceManager';
 
 export function registerPixiButtonNode(LiteGraph: any) {
   function PixiButtonNode(this: any) {
     this.title = 'Button';
-    this.size = NodeSizes.medium;
+    this.size = [180, 320]; // 设置更大的高度以容纳所有控件
     this.boxcolor = NodeColors.render;
     this.color = NodeColors.render;
     this.resizable = false;
@@ -15,6 +15,14 @@ export function registerPixiButtonNode(LiteGraph: any) {
     // 添加节点初始化日志
     console.log('PixiButtonNode 初始化');
     Logger.info('PixiButtonNode', '创建新按钮节点');
+    
+    // Add debug info showing registered node types in Pixi
+    if (LiteGraph && LiteGraph.registered_node_types) {
+      const nodeTypes = Object.keys(LiteGraph.registered_node_types);
+      const renderNodes = nodeTypes.filter(type => type.startsWith('render/'));
+      Logger.info('PixiButtonNode', `Available render nodes: ${renderNodes.join(', ')}`);
+      Logger.info('PixiButtonNode', `Button input ports will accept: pixi_display_object`);
+    }
 
     // 属性
     this.properties = {
@@ -40,7 +48,7 @@ export function registerPixiButtonNode(LiteGraph: any) {
 
     // 输入端口
     this.addInput('audio', 'audio_resource'); 
-    this.addInput('sprite', 'texture'); // 重命名为'sprite'，更准确地表示期望的输入类型
+    this.addInput('texture', 'pixi_display_object'); // Match the type with ImageNode's output
     
     // 设置选项
     this.addWidget('text', 'label', this.properties.label, (v: string) => { this.properties.label = v; this.updateButton(); });
@@ -84,15 +92,54 @@ export function registerPixiButtonNode(LiteGraph: any) {
       this._lastAudioAlias = audioAlias;
     }
 
-    // 获取图像资源输入 - 处理纹理资源
+    // 获取图像资源输入 - 处理从ImageNode传来的对象
     const imageResource = this.getInputData(1);
     if (imageResource) {
-      // 确定输入类型：可以是纹理对象或具有URL的对象
-      if (imageResource instanceof Texture) {
-        // 处理直接传入的纹理对象
+      Logger.info('PixiButtonNode', `Received image input of type: ${imageResource.constructor ? imageResource.constructor.name : typeof imageResource}`);
+      
+      // Handle different types of image resources
+      if (imageResource instanceof Sprite || 
+          (imageResource && typeof imageResource === 'object' && 'texture' in imageResource)) {
+        // Handle Sprite directly from ImageNode
+        if (!this._bgSprite || this._bgSprite !== imageResource) {
+          Logger.info('PixiButtonNode', `Received sprite from ImageNode`);
+          if (this._bgSprite && this._bgSprite.parent === this._container) {
+            this._container.removeChild(this._bgSprite);
+          }
+          
+          // Clone the sprite properties but don't use the actual sprite
+          // to avoid parent/child conflicts
+          if (!this._bgSprite) {
+            this._bgSprite = new Sprite(imageResource.texture);
+          } else {
+            this._bgSprite.texture = imageResource.texture;
+          }
+          
+          this._container.addChildAt(this._bgSprite, 0);
+          
+          // Set dimensions based on the texture
+          if (imageResource.texture) {
+            this.properties.w = imageResource.texture.width || this.properties.w;
+            this.properties.h = imageResource.texture.height || this.properties.h;
+          }
+          
+          this._bgSprite.width = this.properties.w;
+          this._bgSprite.height = this.properties.h;
+          
+          // Hide background rectangle
+          if (this._rect) this._rect.visible = false;
+          
+          // Update text position
+          if (this._text) {
+            this._text.x = this.properties.w / 2;
+            this._text.y = this.properties.h / 2;
+          }
+        }
+      } else if (imageResource instanceof Texture) {
+        // Handle direct texture input
         if (!this._bgSprite || this._bgSprite.texture !== imageResource) {
-          Logger.info('PixiButtonNode', `Received new texture object`);
-          if (this._bgSprite) {
+          Logger.info('PixiButtonNode', `Received texture object`);
+          if (this._bgSprite && this._bgSprite.parent === this._container) {
             this._container.removeChild(this._bgSprite);
             this._bgSprite.destroy();
           }
@@ -100,23 +147,23 @@ export function registerPixiButtonNode(LiteGraph: any) {
           this._bgSprite = new Sprite(imageResource);
           this._container.addChildAt(this._bgSprite, 0);
           
-          // 设置尺寸
+          // Set dimensions
           this.properties.w = imageResource.width || this.properties.w;
           this.properties.h = imageResource.height || this.properties.h;
           this._bgSprite.width = this.properties.w;
           this._bgSprite.height = this.properties.h;
           
-          // 隐藏背景矩形
+          // Hide background rectangle
           if (this._rect) this._rect.visible = false;
           
-          // 更新文本位置
+          // Update text position
           if (this._text) {
             this._text.x = this.properties.w / 2;
             this._text.y = this.properties.h / 2;
           }
         }
       } else if (imageResource.url && imageResource.url !== this.properties.imageUrl) {
-        // 处理传入的包含URL的对象（向后兼容）
+        // Handle object with URL (backward compatibility)
         this.properties.imageUrl = imageResource.url;
         Logger.info('PixiButtonNode', `Received new image URL: ${imageResource.url}`);
       }
@@ -280,7 +327,7 @@ export function registerPixiButtonNode(LiteGraph: any) {
   PixiButtonNode.prototype.currentColorIndex = 0;
   
   // Helper method to unlock audio on browsers with autoplay restrictions
-  PixiButtonNode.prototype._unlockAudio = function(audioElement) {
+  PixiButtonNode.prototype._unlockAudio = function(audioElement: HTMLAudioElement) {
     try {
       // Create a silent audio buffer for unlocking audio playback
       const silentAudio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//tUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABBwBmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZm//sUZAAP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV");
@@ -308,7 +355,7 @@ export function registerPixiButtonNode(LiteGraph: any) {
           });
       }
     } catch (err) {
-      Logger.error('PixiButtonNode', `Error in _unlockAudio: ${err.message}`);
+      Logger.error('PixiButtonNode', `Error in _unlockAudio: ${err}`);
     }
   };
 

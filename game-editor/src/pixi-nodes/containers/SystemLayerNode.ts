@@ -78,10 +78,10 @@ export class SystemLayerNode extends BaseNode {
    */
   initialize() {
     // 设置容器名称
-    this._transitionContainer.name = 'TransitionContainer';
-    this._overlayContainer.name = 'OverlayContainer';
-    this._debugContainer.name = 'DebugContainer';
-    this._container.name = 'SystemLayerMainContainer';
+    this._transitionContainer.label = 'TransitionContainer';
+    this._overlayContainer.label = 'OverlayContainer';
+    this._debugContainer.label = 'DebugContainer';
+    this._container.label = 'SystemLayerMainContainer';
     
     // 设置zIndex，值越大层级越高
     this._transitionContainer.zIndex = 30;  // 最上层：过渡效果

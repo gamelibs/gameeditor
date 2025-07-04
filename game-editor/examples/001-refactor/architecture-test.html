@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>架构重构测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #2C3E50;
+            color: white;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #34495E;
+            border-radius: 8px;
+        }
+        .result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #27AE60;
+        }
+        .error {
+            background: #E74C3C;
+        }
+        button {
+            background: #3498DB;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2980B9;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏗️ 蛋蛋射击 - 架构重构测试</h1>
+    
+    <div class="test-section">
+        <h2>📊 配置系统测试</h2>
+        <button onclick="testGameConfig()">测试 GameConfig</button>
+        <button onclick="testGameConstants()">测试 GameConstants</button>
+        <div id="config-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎨 颜色管理器测试</h2>
+        <button onclick="testColorManager()">测试 ColorManager</button>
+        <button onclick="testColorConversion()">测试颜色转换</button>
+        <div id="color-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎬 动画管理器测试</h2>
+        <button onclick="testAnimationManager()">测试 AnimationManager</button>
+        <button onclick="testAnimationStats()">测试动画统计</button>
+        <div id="animation-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔄 RootManager 集成测试</h2>
+        <button onclick="testRootManagerIntegration()">测试 RootManager 集成</button>
+        <button onclick="testBackwardCompatibility()">测试向后兼容性</button>
+        <div id="integration-results"></div>
+    </div>
+
+    <!-- 引入脚本文件 -->
+    <script src="src/utils/shared/GameConfig.js"></script>
+    <script src="src/utils/shared/GameConstants.js"></script>
+    <script src="src/utils/managers/ColorManager.js"></script>
+    <script src="src/utils/managers/AnimationManager.js"></script>
+
+    <script>
+        // 测试辅助函数
+        function addResult(containerId, message, isError = false) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = isError ? 'result error' : 'result';
+            div.textContent = message;
+            container.appendChild(div);
+        }
+
+        function clearResults(containerId) {
+            document.getElementById(containerId).innerHTML = '';
+        }
+
+        // 配置系统测试
+        function testGameConfig() {
+            clearResults('config-results');
+            try {
+                const config = new GameConfig();
+                
+                // 测试基本获取
+                const gridRows = config.get('grid.rows');
+                addResult('config-results', `✅ 网格行数: ${gridRows}`);
+                
+                // 测试颜色配置
+                const gameColors = config.get('colors.gameEggs');
+                addResult('config-results', `✅ 游戏颜色数量: ${gameColors.length}`);
+                
+                // 测试设置
+                config.set('test.value', 123);
+                const testValue = config.get('test.value');
+                addResult('config-results', `✅ 设置测试值: ${testValue}`);
+                
+                addResult('config-results', '🎉 GameConfig 测试完成');
+            } catch (error) {
+                addResult('config-results', `❌ GameConfig 测试失败: ${error.message}`, true);
+            }
+        }
+
+        function testGameConstants() {
+            clearResults('config-results');
+            try {
+                // 测试常量访问
+                const gameState = GameConstants.GAME_STATES.PLAYING;
+                addResult('config-results', `✅ 游戏状态: ${gameState}`);
+                
+                const eggRadius = GameConstants.SIZE.EGG_RADIUS;
+                addResult('config-results', `✅ 蛋半径: ${eggRadius}`);
+                
+                // 测试方法
+                const hasPhysics = GameConstants.has('PHYSICS', 'GRAVITY');
+                addResult('config-results', `✅ 重力常量存在: ${hasPhysics}`);
+                
+                addResult('config-results', '🎉 GameConstants 测试完成');
+            } catch (error) {
+                addResult('config-results', `❌ GameConstants 测试失败: ${error.message}`, true);
+            }
+        }
+
+        // 颜色管理器测试
+        function testColorManager() {
+            clearResults('color-results');
+            try {
+                const colorManager = new ColorManager();
+                
+                // 测试颜色获取
+                const randomColor = colorManager.getRandomGameEggColor();
+                addResult('color-results', `✅ 随机游戏颜色: 0x${randomColor.toString(16).toUpperCase()}`);
+                
+                const gameColors = colorManager.getGameEggColors();
+                addResult('color-results', `✅ 游戏颜色数量: ${gameColors.length}`);
+                
+                // 测试颜色验证
+                const isValid = colorManager.isValidGameColor(0xFF0000);
+                addResult('color-results', `✅ 红色有效性: ${isValid}`);
+                
+                // 测试颜色名称
+                const colorName = colorManager.getColorName(0xFF0000);
+                addResult('color-results', `✅ 红色名称: ${colorName}`);
+                
+                addResult('color-results', '🎉 ColorManager 测试完成');
+            } catch (error) {
+                addResult('color-results', `❌ ColorManager 测试失败: ${error.message}`, true);
+            }
+        }
+
+        function testColorConversion() {
+            clearResults('color-results');
+            try {
+                const colorManager = new ColorManager();
+                
+                // 测试颜色转换
+                const hex = colorManager.colorToHex(0xFF0000);
+                addResult('color-results', `✅ 颜色转十六进制: ${hex}`);
+                
+                const backToColor = colorManager.hexToColor('#FF0000');
+                addResult('color-results', `✅ 十六进制转颜色: 0x${backToColor.toString(16).toUpperCase()}`);
+                
+                // 测试RGB转换
+                const rgb = colorManager.colorToRGB(0xFF0000);
+                addResult('color-results', `✅ RGB分量: R=${rgb.r}, G=${rgb.g}, B=${rgb.b}`);
+                
+                // 测试颜色变化
+                const darkerColor = colorManager.darkenColor(0xFF0000, 0.3);
+                addResult('color-results', `✅ 变暗后: 0x${darkerColor.toString(16).toUpperCase()}`);
+                
+                addResult('color-results', '🎉 颜色转换测试完成');
+            } catch (error) {
+                addResult('color-results', `❌ 颜色转换测试失败: ${error.message}`, true);
+            }
+        }
+
+        // 动画管理器测试
+        function testAnimationManager() {
+            clearResults('animation-results');
+            try {
+                const animationManager = new AnimationManager();
+                
+                // 测试统计信息
+                let stats = animationManager.getStats();
+                addResult('animation-results', `✅ 初始动画统计: 总数=${stats.totalAnimations}, 活跃=${stats.activeCount}`);
+                
+                // 测试动画创建（模拟）
+                const mockContainer = { addChild: () => {}, removeChild: () => {} };
+                const animId = animationManager.createExplosionEffect(mockContainer, 100, 100);
+                addResult('animation-results', `✅ 爆炸动画ID: ${animId}`);
+                
+                stats = animationManager.getStats();
+                addResult('animation-results', `✅ 创建后统计: 总数=${stats.totalAnimations}, 活跃=${stats.activeCount}`);
+                
+                addResult('animation-results', '🎉 AnimationManager 测试完成');
+            } catch (error) {
+                addResult('animation-results', `❌ AnimationManager 测试失败: ${error.message}`, true);
+            }
+        }
+
+        function testAnimationStats() {
+            clearResults('animation-results');
+            try {
+                const animationManager = new AnimationManager();
+                
+                // 测试多个动画
+                const mockContainer = { addChild: () => {}, removeChild: () => {} };
+                
+                for (let i = 0; i < 3; i++) {
+                    animationManager.createSparkEffect(mockContainer, i * 50, i * 50);
+                }
+                
+                const stats = animationManager.getStats();
+                addResult('animation-results', `✅ 批量创建后: 总数=${stats.totalAnimations}, 活跃=${stats.activeCount}`);
+                
+                // 测试清理
+                animationManager.cleanup();
+                const cleanStats = animationManager.getStats();
+                addResult('animation-results', `✅ 清理后: 总数=${cleanStats.totalAnimations}, 活跃=${cleanStats.activeCount}`);
+                
+                addResult('animation-results', '🎉 动画统计测试完成');
+            } catch (error) {
+                addResult('animation-results', `❌ 动画统计测试失败: ${error.message}`, true);
+            }
+        }
+
+        // RootManager 集成测试需要简化实现，因为它依赖完整的游戏环境
+        function testRootManagerIntegration() {
+            clearResults('integration-results');
+            addResult('integration-results', '⚠️ RootManager 集成测试需要完整游戏环境');
+            addResult('integration-results', '💡 请在实际游戏中通过控制台测试');
+            addResult('integration-results', '📝 测试命令: window.rootManager.colorManager.getGameEggColors()');
+        }
+
+        function testBackwardCompatibility() {
+            clearResults('integration-results');
+            addResult('integration-results', '⚠️ 向后兼容性测试需要完整游戏环境');
+            addResult('integration-results', '💡 请验证现有测试模块是否正常工作');
+            addResult('integration-results', '📝 检查 Step1-8 是否能正常加载和运行');
+        }
+
+        // 页面加载完成后的自动测试
+        document.addEventListener('DOMContentLoaded', () => {
+            addResult('config-results', '🚀 架构重构测试页面已加载');
+            addResult('color-results', '🎨 点击按钮开始测试各模块功能');
+            addResult('animation-results', '🎬 所有管理器已准备就绪');
+            addResult('integration-results', '🔄 集成测试需要完整游戏环境');
+        });
+    </script>
+</body>
+</html>

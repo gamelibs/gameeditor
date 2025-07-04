@@ -71,10 +71,10 @@ export class UILayerNode extends BaseNode {
    */
   initialize() {
     // 设置容器名称
-    this._popupContainer.name = 'PopupContainer';
-    this._mainUIContainer.name = 'MainUIContainer';
-    this._hudContainer.name = 'HUDContainer';
-    this._container.name = 'UILayerMainContainer';
+    this._popupContainer.label = 'PopupContainer';
+    this._mainUIContainer.label = 'MainUIContainer';
+    this._hudContainer.label = 'HUDContainer';
+    this._container.label = 'UILayerMainContainer';
     
     // 设置zIndex，值越大层级越高
     this._popupContainer.zIndex = 30;  // 最上层

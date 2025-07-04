@@ -17,9 +17,17 @@ export abstract class BaseDisplayNode extends BaseNode {
 
     constructor() {
         super();
+        
+        // 设置固定的合理高度，适应基础显示属性控件
+        // 包含6个基础控件 + 1个颜色输入端口，预设280px高度
+        this.size = [180, 280];
+        
         this.addDisplayPropertyWidgets();
         // 添加颜色输入端口 - 用于连接ColorPickerNode
         this.addInput('color', 'string');
+        
+        // 不再使用自动调整，使用固定的预设高度
+        // this.scheduleAutoResize(60, 20, 180, 10);
     }
 
     addDisplayPropertyWidgets() {

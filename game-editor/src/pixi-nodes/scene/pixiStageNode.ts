@@ -13,7 +13,7 @@ export function registerPixiStageNode(LiteGraph: any) {
     // 只保留悬浮窗口方案，不再强制占位
   }
 
-  PixiStageNode.prototype._initStage = function(node: any) {
+  PixiStageNode.prototype._initStage = function() {
     // 只创建一次canvas和Pixi Application
     if (this._app) {
       return;
@@ -88,7 +88,7 @@ export function registerPixiStageNode(LiteGraph: any) {
         }
         // 已移除默认红色矩形，实际渲染交给 onExecute 的 children
       }
-    }).catch((err) => {
+    }).catch((err: any) => {
       Logger.error('PixiStageNode', 'Pixi Application init error:', err);
     });
   };

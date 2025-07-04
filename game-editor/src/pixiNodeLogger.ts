@@ -20,8 +20,8 @@ export const LogLevelNames = {
   [LogLevels.DEBUG]: "Debug"
 };
 
-// 默认日志级别（调试时设置为 INFO，生产环境可改为 NONE）
-let currentLogLevel = LogLevels.INFO;
+// 默认日志级别（调试时设置为 DEBUG，生产环境可改为 NONE）
+let currentLogLevel = LogLevels.DEBUG;
 
 // 日志工具函数
 export const Logger = {

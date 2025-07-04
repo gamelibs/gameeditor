@@ -76,7 +76,7 @@ export function registerPixiAppNode(LiteGraph: any) {
         let dragOffsetX = 0;
         let dragOffsetY = 0;
         container.onmousedown = (e: MouseEvent) => {
-          if (e.target === container) {
+          if (e.target === container && container) {
             isDragging = true;
             dragOffsetX = e.clientX - container.offsetLeft;
             dragOffsetY = e.clientY - container.offsetTop;
@@ -155,5 +155,5 @@ export function registerPixiAppNode(LiteGraph: any) {
     }
     this.setOutputData(0, this._app);
   };
-  LiteGraph.registerNodeType('scene/main', PixiAppNode);
+  LiteGraph.registerNodeType('scene/PixiApp', PixiAppNode);
 }

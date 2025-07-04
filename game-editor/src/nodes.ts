@@ -7,10 +7,14 @@ import { registerPixiCircleNode } from './pixi-nodes/render/pixiCircleNode';
 import { registerPixiLineNode } from './pixi-nodes/render/pixiLineNode';
 import { registerPixiImageNode } from './pixi-nodes/render/pixiImageNode';
 import { registerPixiTriangleNode } from './pixi-nodes/render/pixiTriangleNode';
+import { registerTextNode } from './pixi-nodes/render/pixiTextNode';
+import { registerClickCounterNode } from './pixi-nodes/render/pixiClickCounterNode';
 
 import { registerTextureResourceNode } from './pixi-nodes/resource/textureResourceNode';
 import { registerAudioResourceNode } from './pixi-nodes/resource/audioResourceNode';
 import { registerResourceGroupNode } from './pixi-nodes/resource/resourceGroupNode';
+import { registerImageLoaderNode } from './pixi-nodes/resource/imageLoaderNode';
+import { registerTextureNode } from './pixi-nodes/resource/textureNode';
 import { registerPixiButtonNode } from './pixi-nodes/render/pixiButtonNode';
 import { registerPixiEventNode } from './pixi-nodes/event/pixiEventNode';
 import { registerRootContainerNode } from './pixi-nodes/containers/RootContainerNode';
@@ -29,6 +33,8 @@ export function registerCustomNodes() {
   registerPixiCircleNode(LiteGraph);
   registerPixiLineNode(LiteGraph);
   registerPixiImageNode(LiteGraph);
+  registerTextNode(LiteGraph);
+  registerClickCounterNode(LiteGraph);
   registerTextureResourceNode(LiteGraph);
   registerResourceGroupNode(LiteGraph);
   registerAudioResourceNode(LiteGraph);
@@ -41,6 +47,8 @@ export function registerCustomNodes() {
   registerSystemLayerNode(LiteGraph);
   registerDisplayCollectorNode(LiteGraph);
   registerPixiTriangleNode(LiteGraph);
+  registerImageLoaderNode(LiteGraph);
+  registerTextureNode(LiteGraph);
   
   // 其它节点实现后，依次在此注册
 }

@@ -87,9 +87,9 @@ export class RootContainerNode extends BaseNode {
     this._systemLayer.removeChildren();
     
     // 设置层容器名称
-    this._systemLayer.name = 'SystemLayer';
-    this._gameLayer.name = 'GameLayer';
-    this._uiLayer.name = 'UILayer';
+    this._systemLayer.label = 'SystemLayer';
+    this._gameLayer.label = 'GameLayer';
+    this._uiLayer.label = 'UILayer';
     
     // 设置层级顺序（zIndex 值越大越上层）
     this._systemLayer.zIndex = 0;  // 背景层
