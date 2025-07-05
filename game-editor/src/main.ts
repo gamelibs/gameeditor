@@ -527,11 +527,12 @@ import { LGraph, LGraphCanvas, LiteGraph } from 'litegraph.js';
 import 'litegraph.js/css/litegraph.css';
 import './style.css';
 
+// 导入三面板UI管理器
+import { ThreePanelUI } from './ui/ThreePanelUI';
 
 // 注册自定义节点
 import { registerCustomNodes } from './nodes';
 registerCustomNodes();
-
 
 // 2. 创建 LiteGraph 编辑器
 const graph = new LGraph();
@@ -540,6 +541,9 @@ const canvas = new LGraphCanvas(canvasElement, graph);
 
 // 创建全局顶栏按钮组（此时 graph 已初始化）
 createTopbarButtonGroup(graph, LiteGraph);
+
+// 初始化三面板UI
+const threePanelUI = new ThreePanelUI(graph);
 
 
 // 3. 侧边栏节点列表填充与点击添加

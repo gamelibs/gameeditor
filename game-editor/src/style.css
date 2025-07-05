@@ -72,80 +72,447 @@ body, html {
   display: flex;
   width: 100vw;
   height: calc(100vh - 64px);
+  position: relative;
 }
-#sidebar {
-  width: 220px;
+
+/* 浮动节点导航面板 */
+.floating-sidebar {
+  position: fixed;
+  top: 80px;
+  left: 10px;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.sidebar-content {
+  position: relative;
+  left: -320px;
+  width: 300px;
+  height: 80vh;
   background: #232323;
-  color: #fff;
-  padding: 10px;
-  box-sizing: border-box;
-  overflow-y: auto;
-  border-right: 1px solid #444;
+  border: 2px solid #4ECDC4;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-#sidebar h2 {
-  margin-top: 0;
-  font-size: 1.1em;
+
+.sidebar-content.open {
+  left: 0;
+}
+
+.sidebar-header {
+  background: #2a2a2a;
+  padding: 15px;
   border-bottom: 1px solid #444;
-  padding-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-#node-list {
-  list-style: none;
-  padding: 0;
+
+.sidebar-header h3 {
   margin: 0;
+  color: #4ECDC4;
+  font-size: 16px;
 }
-#node-list li {
-  padding: 8px 10px;
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 18px;
   cursor: pointer;
-  border-bottom: 1px solid #383838;
-  font-size: 0.95em;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
-/* Node category styling */
-.node-category {
-  margin-left: 8px;
-  padding-left: 8px;
-}
-
-.category-title {
-  font-weight: bold;
-  margin-top: 12px;
+.close-btn:hover {
+  color: #4ECDC4;
   background: #333;
-  border-bottom: none !important;
 }
 
-/* Use colors from the nodesConfig.ts */
-.render-node {
-  border-left: 2px solid #B36B09; /* Render - Deep Orange */
+.sidebar-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
 }
 
-.container-node {
-  border-left: 2px solid #23527C; /* Scene - Deep Blue */  
-}
-
-.resource-node {
-  border-left: 2px solid #357A38; /* Resource - Deep Green */
-}
-
-.scene-node {
-  border-left: 2px solid #23527C; /* Scene - Deep Blue */
-}
-
-.event-node {
-  border-left: 2px solid #4B266A; /* Event - Deep Purple */
-}
-
-.tool-node {
-  border-left: 2px solid #7C2323; /* Logic - Deep Red */
+/* 原有的sidebar样式保持兼容 */
+#sidebar {
+  display: none; /* 隐藏原有的sidebar */
 }
 
 #main-content {
+  width: 100%;
+  position: relative;
+  display: flex;
+  height: 100%;
+}
+
+/* 三栏布局样式 */
+.editor-panel {
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  border-right: 1px solid #444;
+  min-width: 300px;
+}
+
+#node-editor-panel {
+  flex: 2; /* 节点编辑器占50% (2/4) */
+  min-width: 400px;
+}
+
+#game-preview-panel {
+  flex: 1; /* 游戏预览占25% (1/4) */
+  min-width: 300px;
+}
+
+#code-preview-panel {
+  flex: 1; /* 代码预览占25% (1/4) */
+  min-width: 350px;
+  border-right: none;
+}
+
+/* 面板头部样式 */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #2a2a2a;
+  color: #fff;
+  padding: 8px 12px;
+  border-bottom: 1px solid #444;
+  font-size: 14px;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panel-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.panel-btn {
+  background: #444;
+  color: #fff;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.panel-btn:hover {
+  background: #555;
+}
+
+/* 垂直分割条样式 */
+.vertical-splitter {
+  width: 4px;
+  background: #333;
+  cursor: col-resize;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.vertical-splitter:hover {
+  background: #555;
+}
+
+.vertical-splitter::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 20px;
+  background: #666;
+  border-radius: 1px;
+}
+
+/* 节点编辑器画布 */
+#graphCanvas {
+  flex: 1;
+  width: 100%;
+  background: #1a1a1a;
+}
+
+/* 游戏预览区域 */
+.game-preview-content {
+  flex: 1;
+  position: relative;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+
+.game-canvas {
+  border: 2px solid #4ECDC4;
+  border-radius: 8px;
+  background: #222;
+  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.game-canvas:hover {
+  transform: scale(1.02);
+}
+
+/* 游戏信息显示 */
+.game-info {
+  margin-top: 10px;
+  text-align: center;
+  color: #ccc;
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.game-info .design-size {
+  color: #4ECDC4;
+  font-weight: bold;
+}
+
+.game-info .scale-info {
+  color: #999;
+  margin-top: 2px;
+}
+
+.loading-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #444;
+  border-top: 2px solid #4CAF50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 代码预览区域 */
+.code-preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.code-tabs {
+  display: flex;
+  background: #2a2a2a;
+  border-bottom: 1px solid #444;
+}
+
+.code-tab {
+  padding: 8px 16px;
+  background: #333;
+  color: #ccc;
+  cursor: pointer;
+  border-right: 1px solid #444;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.code-tab:hover {
+  background: #444;
+  color: #fff;
+}
+
+.code-tab.active {
+  background: #4CAF50;
+  color: #fff;
+}
+
+.code-tab-content {
   flex: 1;
   position: relative;
 }
-#graphCanvas {
-  width: 100%;
-  height: 100%;
+
+.tab-pane {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: none;
+  overflow: auto;
+}
+
+.tab-pane.active {
   display: block;
+}
+
+/* 代码显示区域 */
+.code-display {
+  margin: 0;
+  padding: 12px;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: 'Cascadia Code', 'Fira Code', 'Monaco', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow: auto;
+  height: 100%;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* 语法高亮样式 */
+.code-display .keyword {
+  color: #569cd6;
+}
+
+.code-display .string {
+  color: #ce9178;
+}
+
+.code-display .number {
+  color: #b5cea8;
+}
+
+.code-display .comment {
+  color: #6a9955;
+  font-style: italic;
+}
+
+.code-display .function {
+  color: #dcdcaa;
+}
+
+.code-display .class {
+  color: #4ec9b0;
+}
+
+/* 调试信息样式 */
+.debug-info {
+  padding: 12px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.debug-section {
+  margin-bottom: 16px;
+}
+
+.debug-section h4 {
+  margin: 0 0 8px 0;
+  color: #4CAF50;
+  font-size: 13px;
+}
+
+.node-status-list,
+.data-flow-list {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.node-status-item,
+.data-flow-item {
+  padding: 4px 0;
+  border-bottom: 1px solid #333;
+  font-family: monospace;
+}
+
+.node-status-item:last-child,
+.data-flow-item:last-child {
+  border-bottom: none;
+}
+
+.node-status-running {
+  color: #4CAF50;
+}
+
+.node-status-error {
+  color: #f44336;
+}
+
+.node-status-idle {
+  color: #999;
+}
+
+/* 控制台输出样式 */
+.console-output {
+  padding: 12px;
+  background: #1e1e1e;
+  color: #fff;
+  font-family: monospace;
+  font-size: 12px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.console-log {
+  color: #fff;
+}
+
+.console-error {
+  color: #f44336;
+}
+
+.console-warn {
+  color: #ff9800;
+}
+
+.console-info {
+  color: #2196f3;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  #node-editor-panel {
+    flex: 1.5;
+  }
+  
+  #game-preview-panel,
+  #code-preview-panel {
+    flex: 1;
+  }
+}
+
+@media (max-width: 800px) {
+  #main-content {
+    flex-direction: column;
+  }
+  
+  .vertical-splitter {
+    display: none;
+  }
+  
+  .editor-panel {
+    min-height: 33vh;
+    border-right: none;
+    border-bottom: 1px solid #444;
+  }
 }
 
 /* 日志级别选择控件 */
@@ -238,4 +605,64 @@ input[type="color"] {
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
   border-bottom: 8px solid #2a2a2a;
+}
+
+/* 浮动侧边栏中的节点列表样式 */
+.floating-sidebar #node-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.floating-sidebar #node-list li {
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #383838;
+  font-size: 0.95em;
+  color: #fff;
+  transition: background 0.2s ease;
+}
+
+.floating-sidebar #node-list li:hover {
+  background: #333;
+  color: #4ECDC4;
+}
+
+/* Node category styling in floating sidebar */
+.floating-sidebar .node-category {
+  margin-left: 8px;
+  padding-left: 8px;
+}
+
+.floating-sidebar .category-title {
+  font-weight: bold;
+  margin-top: 12px;
+  background: #333;
+  border-bottom: none !important;
+  color: #4ECDC4;
+}
+
+/* Use colors from the nodesConfig.ts in floating sidebar */
+.floating-sidebar .render-node {
+  border-left: 2px solid #B36B09; /* Render - Deep Orange */
+}
+
+.floating-sidebar .container-node {
+  border-left: 2px solid #23527C; /* Scene - Deep Blue */  
+}
+
+.floating-sidebar .resource-node {
+  border-left: 2px solid #357A38; /* Resource - Deep Green */
+}
+
+.floating-sidebar .scene-node {
+  border-left: 2px solid #23527C; /* Scene - Deep Blue */
+}
+
+.floating-sidebar .event-node {
+  border-left: 2px solid #4B266A; /* Event - Deep Purple */
+}
+
+.floating-sidebar .tool-node {
+  border-left: 2px solid #7C2323; /* Logic - Deep Red */
 }
