@@ -23,28 +23,51 @@ export async function generateGameProject(config: GameConfig, projectName: strin
     content: JSON.stringify(config, null, 2)
   });
 
-  // 3. 生成游戏运行时文件
+  // 3. 下载并包含Pixi.js库文件
+  try {
+    const pixiResponse = await fetch('https://pixijs.download/release/pixi.min.js');
+    if (pixiResponse.ok) {
+      const pixiContent = await pixiResponse.text();
+      files.push({
+        path: 'js/pixi.min.js',
+        content: pixiContent
+      });
+      console.log('✅ Pixi.js 库已下载并包含在导出包中');
+    } else {
+      console.warn('⚠️ 无法下载Pixi.js库，将使用CDN版本');
+    }
+  } catch (error) {
+    console.warn('⚠️ 无法下载Pixi.js库，将使用CDN版本:', error);
+  }
+
+  // 4. 生成游戏运行时文件
   files.push({
     path: 'js/game-runtime.js',
     content: await generateGameRuntimeJS()
   });
 
-  // 4. 生成主游戏文件
+  // 5. 生成主游戏文件
   files.push({
     path: 'js/game.js',
     content: generateGameJS()
   });
 
-  // 5. 生成样式文件
+  // 6. 生成样式文件
   files.push({
     path: 'css/game.css',
     content: generateGameCSS()
   });
 
-  // 6. 生成README文件
+  // 7. 生成README文件
   files.push({
     path: 'README.md',
     content: generateReadme(projectName, config)
+  });
+
+  // 8. 生成部署说明
+  files.push({
+    path: 'DEPLOY.md',
+    content: generateDeploymentGuide(projectName)
   });
 
   return files;
@@ -55,26 +78,127 @@ function generateIndexHTML(config: GameConfig, _projectName: string): string {
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>${config.title}</title>
     <link rel="stylesheet" href="css/game.css">
-    <script src="https://pixijs.download/release/pixi.min.js"></script>
 </head>
 <body>
     <div id="loading-screen">
         <div class="loading-content">
+            <div class="loading-logo">🎮</div>
             <h1>${config.title}</h1>
             <div class="loading-bar">
                 <div class="loading-progress"></div>
             </div>
-            <p>加载中...</p>
+            <p class="loading-text">正在加载 Pixi.js...</p>
         </div>
     </div>
     
     <div id="game-container" style="display: none;"></div>
+    
+    <div id="error-screen" style="display: none;">
+        <div class="error-content">
+            <h2>⚠️ 出现错误</h2>
+            <p id="error-message"></p>
+            <button onclick="location.reload()">重新加载</button>
+        </div>
+    </div>
 
-    <script src="js/game-runtime.js"></script>
-    <script src="js/game.js"></script>
+    <!-- Pixi.js 库 - 优先本地，回退到CDN -->
+    <script>
+        function loadPixiAndStart() {
+            const updateProgress = (progress, text) => {
+                const progressBar = document.querySelector('.loading-progress');
+                const loadingText = document.querySelector('.loading-text');
+                if (progressBar) progressBar.style.width = (progress * 100) + '%';
+                if (loadingText) loadingText.textContent = text;
+            };
+            
+            updateProgress(0.1, '正在加载 Pixi.js...');
+            
+            // 尝试加载本地Pixi.js
+            const localScript = document.createElement('script');
+            localScript.onerror = function() {
+                console.warn('本地Pixi.js加载失败，使用CDN版本');
+                updateProgress(0.2, '正在从CDN加载 Pixi.js...');
+                
+                // 回退到CDN
+                const cdnScript = document.createElement('script');
+                cdnScript.onerror = function() {
+                    showError('Pixi.js 加载失败，请检查网络连接');
+                };
+                cdnScript.onload = function() {
+                    updateProgress(0.5, '已加载 Pixi.js，正在启动游戏...');
+                    loadGameScripts();
+                };
+                cdnScript.src = 'https://pixijs.download/release/pixi.min.js';
+                document.head.appendChild(cdnScript);
+            };
+            
+            localScript.onload = function() {
+                updateProgress(0.5, '已加载 Pixi.js，正在启动游戏...');
+                loadGameScripts();
+            };
+            
+            localScript.src = 'js/pixi.min.js';
+            document.head.appendChild(localScript);
+        }
+        
+        function loadGameScripts() {
+            const updateProgress = (progress, text) => {
+                const progressBar = document.querySelector('.loading-progress');
+                const loadingText = document.querySelector('.loading-text');
+                if (progressBar) progressBar.style.width = (progress * 100) + '%';
+                if (loadingText) loadingText.textContent = text;
+            };
+            
+            updateProgress(0.6, '正在加载游戏引擎...');
+            
+            // 加载游戏运行时
+            const runtimeScript = document.createElement('script');
+            runtimeScript.onerror = function() {
+                showError('游戏引擎加载失败');
+            };
+            runtimeScript.onload = function() {
+                updateProgress(0.8, '正在加载游戏逻辑...');
+                
+                // 加载主游戏脚本
+                const gameScript = document.createElement('script');
+                gameScript.onerror = function() {
+                    showError('游戏逻辑加载失败');
+                };
+                gameScript.onload = function() {
+                    updateProgress(0.9, '准备启动游戏...');
+                };
+                gameScript.src = 'js/game.js';
+                document.head.appendChild(gameScript);
+            };
+            runtimeScript.src = 'js/game-runtime.js';
+            document.head.appendChild(runtimeScript);
+        }
+        
+        function showError(message) {
+            console.error('加载错误:', message);
+            
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) loadingScreen.style.display = 'none';
+            
+            const errorScreen = document.getElementById('error-screen');
+            const errorMessage = document.getElementById('error-message');
+            
+            if (errorScreen && errorMessage) {
+                errorMessage.textContent = message;
+                errorScreen.style.display = 'flex';
+            } else {
+                alert('加载失败: ' + message);
+            }
+        }
+        
+        // 页面加载完成后开始加载
+        window.addEventListener('load', loadPixiAndStart);
+    </script>
 </body>
 </html>`;
 }
@@ -562,46 +686,161 @@ function generateGameJS(): string {
  */
 let gameRuntime = null;
 
-async function startGame() {
-    try {
-        // 加载游戏配置
-        const response = await fetch('game-config.json');
-        const gameConfig = await response.json();
-        
-        // 隐藏加载画面
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('game-container').style.display = 'block';
-        
-        // 初始化游戏
-        const container = document.getElementById('game-container');
-        gameRuntime = new GameRuntime(gameConfig, container);
-        await gameRuntime.init();
-        
-        console.log('游戏启动成功!');
-        
-    } catch (error) {
-        console.error('游戏启动失败:', error);
-        alert('游戏启动失败: ' + error.message);
+function showError(message) {
+    console.error('游戏错误:', message);
+    
+    // 隐藏加载画面
+    const loadingScreen = document.getElementById('loading-screen');
+    if (loadingScreen) loadingScreen.style.display = 'none';
+    
+    // 显示错误画面
+    const errorScreen = document.getElementById('error-screen');
+    const errorMessage = document.getElementById('error-message');
+    
+    if (errorScreen && errorMessage) {
+        errorMessage.textContent = message;
+        errorScreen.style.display = 'flex';
+    } else {
+        // 回退方案
+        alert('游戏启动失败: ' + message);
     }
 }
 
-// 页面加载完成后启动游戏
-window.addEventListener('load', () => {
-    // 模拟加载时间
-    setTimeout(startGame, 1000);
-});
+function updateLoadingProgress(progress, text) {
+    const progressBar = document.querySelector('.loading-progress');
+    const loadingText = document.querySelector('.loading-text');
+    
+    if (progressBar) {
+        progressBar.style.width = (progress * 100) + '%';
+    }
+    
+    if (loadingText && text) {
+        loadingText.textContent = text;
+    }
+}
+
+async function startGame() {
+    try {
+        // 检查Pixi.js是否已加载
+        if (typeof PIXI === 'undefined') {
+            throw new Error('Pixi.js 未正确加载');
+        }
+        
+        updateLoadingProgress(0.95, '加载游戏配置...');
+        
+        // 加载游戏配置
+        const response = await fetch('game-config.json');
+        if (!response.ok) {
+            throw new Error(\`配置文件加载失败: HTTP \${response.status}\`);
+        }
+        
+        const gameConfig = await response.json();
+        console.log('✅ 游戏配置加载完成:', gameConfig);
+        
+        // 验证游戏配置
+        if (!gameConfig.nodes || !Array.isArray(gameConfig.nodes)) {
+            throw new Error('游戏配置无效：缺少节点数据');
+        }
+        
+        if (!gameConfig.title) {
+            gameConfig.title = '未命名游戏';
+        }
+        
+        if (!gameConfig.width || !gameConfig.height) {
+            gameConfig.width = 640;
+            gameConfig.height = 480;
+        }
+        
+        updateLoadingProgress(0.98, '初始化游戏引擎...');
+        
+        // 初始化游戏
+        const container = document.getElementById('game-container');
+        if (!container) {
+            throw new Error('游戏容器未找到');
+        }
+        
+        // 检查GameRuntime是否已定义
+        if (typeof GameRuntime === 'undefined') {
+            throw new Error('游戏引擎未正确加载');
+        }
+        
+        gameRuntime = new GameRuntime(gameConfig, container);
+        await gameRuntime.init();
+        
+        updateLoadingProgress(1.0, '启动完成！');
+        
+        // 延迟一下让用户看到100%进度
+        setTimeout(() => {
+            // 隐藏加载画面
+            const loadingScreen = document.getElementById('loading-screen');
+            if (loadingScreen) {
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 500);
+            }
+            
+            // 显示游戏容器
+            container.style.display = 'block';
+            
+            console.log('🎮 游戏启动成功!');
+        }, 300);
+        
+    } catch (error) {
+        console.error('游戏启动失败:', error);
+        showError(error.message || '未知错误');
+    }
+}
+
+// 检查依赖并启动游戏
+function checkDependenciesAndStart() {
+    let attempts = 0;
+    const maxAttempts = 100; // 10秒超时
+    
+    const checkAndStart = () => {
+        attempts++;
+        
+        if (typeof PIXI !== 'undefined' && typeof GameRuntime !== 'undefined') {
+            console.log('✅ 所有依赖已加载，启动游戏...');
+            startGame();
+        } else if (attempts >= maxAttempts) {
+            showError('依赖加载超时，请重新加载页面');
+        } else {
+            setTimeout(checkAndStart, 100);
+        }
+    };
+    
+    checkAndStart();
+}
+
+// 当所有脚本加载完成后启动游戏
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkDependenciesAndStart);
+} else {
+    checkDependenciesAndStart();
+}
 
 // 页面卸载时清理资源
 window.addEventListener('beforeunload', () => {
     if (gameRuntime) {
+        console.log('🧹 清理游戏资源...');
         gameRuntime.destroy();
     }
+});
+
+// 监听在线/离线状态
+window.addEventListener('online', () => {
+    console.log('🌐 网络连接已恢复');
+});
+
+window.addEventListener('offline', () => {
+    console.log('📴 网络连接已断开');
 });`;
 }
 
 function generateGameCSS(): string {
   return `/**
- * 游戏样式文件
+ * 游戏样式文件 - 增强版
  */
 * {
     margin: 0;
@@ -609,104 +848,237 @@ function generateGameCSS(): string {
     box-sizing: border-box;
 }
 
-body {
-    font-family: 'Arial', sans-serif;
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     background: #000;
     color: #fff;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
+/* 加载画面 */
 #loading-screen {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    transition: opacity 0.5s ease;
 }
 
 .loading-content {
     text-align: center;
-    max-width: 400px;
+    max-width: 90%;
     padding: 20px;
 }
 
+.loading-logo {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
 .loading-content h1 {
-    font-size: 2.5em;
-    margin-bottom: 30px;
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 2rem;
     color: #fff;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
 }
 
 .loading-bar {
-    width: 100%;
+    width: 300px;
+    max-width: 80vw;
     height: 8px;
     background: rgba(255,255,255,0.3);
     border-radius: 4px;
+    margin: 0 auto 1rem;
     overflow: hidden;
-    margin: 20px 0;
 }
 
 .loading-progress {
     height: 100%;
     background: linear-gradient(90deg, #4ECDC4, #44A08D);
     border-radius: 4px;
-    animation: loading 2s ease-in-out infinite;
-}
-
-@keyframes loading {
-    0% { width: 0%; }
-    50% { width: 70%; }
-    100% { width: 100%; }
-}
-
-.loading-content p {
-    font-size: 1.2em;
-    opacity: 0.9;
-}
-
-#game-container {
+    width: 0%;
+    transition: width 0.3s ease;
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+}
+
+.loading-progress::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.loading-text {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 1rem;
+}
+
+/* 游戏容器 */
+#game-container {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100vw;
     height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     background: #222;
 }
 
 #game-container canvas {
+    border: none;
+    background: transparent;
+    touch-action: manipulation;
+    image-rendering: auto;
     max-width: 100vw;
     max-height: 100vh;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    border: 1px solid #444;
     box-shadow: 0 4px 20px rgba(0,0,0,0.5);
 }
 
-/* 移动端适配 */
+/* 错误画面 */
+#error-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.95);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1001;
+}
+
+.error-content {
+    text-align: center;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    padding: 2rem;
+    border-radius: 16px;
+    max-width: 90%;
+    max-width: 450px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+    animation: errorSlideIn 0.4s ease-out;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+@keyframes errorSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-100px) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.error-content h2 {
+    color: #fff;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.error-content p {
+    margin-bottom: 2rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.1rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid rgba(255, 255, 255, 0.5);
+}
+
+.error-content button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.error-content button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.error-content button:active {
+    transform: translateY(0);
+}
+
+/* 移动端优化 */
 @media (max-width: 768px) {
     .loading-content h1 {
-        font-size: 2em;
+        font-size: 2rem;
+    }
+    
+    .loading-bar {
+        width: 250px;
+    }
+    
+    .error-content {
+        margin: 1rem;
+        padding: 1.5rem;
     }
     
     #game-container canvas {
         border: none;
-        max-width: 100vw;
-        max-height: 100vh;
     }
 }
 
-/* 确保游戏画布始终居中且保持宽高比 */
+@media (max-height: 600px) {
+    .loading-content h1 {
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+    }
+    
+    .loading-logo {
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* 响应式游戏画布 */
 @media (orientation: landscape) {
     #game-container canvas {
         max-height: 100vh;
@@ -718,6 +1090,57 @@ body {
     #game-container canvas {
         max-width: 100vw;
         height: auto;
+    }
+}
+
+/* 高DPI屏幕优化 */
+@media (-webkit-min-device-pixel-ratio: 2) {
+    #game-container canvas {
+        image-rendering: auto;
+    }
+}
+
+/* 安全区域适配 (iPhone X等) */
+@supports(padding: max(0px)) {
+    #game-container {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* 性能优化 */
+#game-container,
+#loading-screen,
+#error-screen {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* 减少动画（尊重用户偏好） */
+@media (prefers-reduced-motion: reduce) {
+    .loading-logo,
+    .loading-progress::after,
+    .error-content {
+        animation: none;
+    }
+    
+    #loading-screen,
+    .error-content button {
+        transition: none;
+    }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+    .error-content {
+        background: #2c3e50;
+        color: #ecf0f1;
+    }
+    
+    .error-content p {
+        color: #bdc3c7;
     }
 }`;
 }
@@ -779,5 +1202,64 @@ ${projectName}/
 
 - 生成时间: ${new Date().toLocaleString()}
 - 生成器: Pixi.js 游戏编辑器
+`;
+}
+
+function generateDeploymentGuide(projectName: string): string {
+  return `# ${projectName} 部署指南
+
+## 快速部署
+
+### 方法1：本地服务器
+\`\`\`bash
+# Python 3
+python -m http.server 8000
+
+# Python 2
+python -m SimpleHTTPServer 8000
+
+# Node.js
+npx serve .
+
+# PHP
+php -S localhost:8000
+\`\`\`
+
+然后在浏览器中访问 \`http://localhost:8000\`
+
+### 方法2：在线部署
+
+#### Vercel (推荐)
+1. 安装 Vercel CLI: \`npm i -g vercel\`
+2. 在项目目录运行: \`vercel\`
+3. 按提示完成部署
+
+#### Netlify
+1. 访问 [Netlify Drop](https://app.netlify.com/drop)
+2. 将项目文件夹拖拽到页面上
+3. 等待部署完成
+
+#### GitHub Pages
+1. 将代码推送到 GitHub 仓库
+2. 在仓库设置中启用 GitHub Pages
+3. 选择分支为 \`main\` 或 \`gh-pages\`
+
+## 注意事项
+
+⚠️ **重要**：游戏必须通过HTTP(S)服务器运行，不能直接双击HTML文件打开！
+
+- 支持所有现代浏览器
+- 移动端已优化
+- 建议使用HTTPS以获得最佳体验
+
+## 故障排除
+
+如果遇到问题：
+1. 检查浏览器控制台是否有错误
+2. 确保所有文件都在正确位置
+3. 验证是否通过HTTP服务器访问
+4. 检查网络连接（如果使用CDN资源）
+
+生成时间: ${new Date().toLocaleString()}
 `;
 }
