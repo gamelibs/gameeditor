@@ -50,7 +50,7 @@
           </div>
         </div>
         <div class="game-preview-content">
-          <canvas id="gamePreviewCanvas" class="game-canvas"></canvas>
+          <!-- iframe将在此处动态加载 -->
           <div id="gameLoadingIndicator" class="loading-indicator">
             <div class="loading-spinner"></div>
             <span>加载游戏中...</span>
@@ -73,40 +73,41 @@
         <div class="code-preview-content">
           <div class="code-tabs">
             <div class="code-tab active" data-tab="game-logic">🎮 游戏逻辑</div>
-            <div class="code-tab" data-tab="index-html">📄 index.html</div>
             <div class="code-tab" data-tab="runtime">⚡ 运行时引擎</div>
-            <div class="code-tab" data-tab="debug">🐛 调试信息</div>
-            <div class="code-tab" data-tab="console">📊 控制台</div>
+            <div class="code-tab" data-tab="index-html">� index.html</div>
+            <div class="code-tab" data-tab="debug-console">� 调试控制台</div>
           </div>
           <div class="code-tab-content">
             <!-- 游戏逻辑标签页 -->
             <div id="game-logic-tab" class="tab-pane active">
               <pre id="gameLogicDisplay" class="code-display"><code>// 等待节点图变化...</code></pre>
             </div>
-            <!-- index.html标签页 -->
-            <div id="index-html-tab" class="tab-pane">
-              <pre id="indexHtmlDisplay" class="code-display"><code><!-- 游戏入口HTML --></code></pre>
-            </div>
             <!-- 运行时引擎标签页 -->
             <div id="runtime-tab" class="tab-pane">
               <pre id="runtimeDisplay" class="code-display"><code>// 游戏运行时引擎</code></pre>
             </div>
-            <!-- 调试信息标签页 -->
-            <div id="debug-tab" class="tab-pane">
-              <div class="debug-info">
-                <div class="debug-section">
-                  <h4>节点执行状态</h4>
-                  <div id="nodeExecutionStatus" class="node-status-list"></div>
+            <!-- index.html标签页 -->
+            <div id="index-html-tab" class="tab-pane">
+              <pre id="indexHtmlDisplay" class="code-display"><code><!-- 游戏入口HTML --></code></pre>
+            </div>
+            <!-- 调试控制台标签页 -->
+            <div id="debug-console-tab" class="tab-pane">
+              <div class="debug-console-container">
+                <div class="debug-info">
+                  <div class="debug-section">
+                    <h4>节点执行状态</h4>
+                    <div id="nodeExecutionStatus" class="node-status-list"></div>
+                  </div>
+                  <div class="debug-section">
+                    <h4>数据流追踪</h4>
+                    <div id="dataFlowTrace" class="data-flow-list"></div>
+                  </div>
                 </div>
-                <div class="debug-section">
-                  <h4>数据流追踪</h4>
-                  <div id="dataFlowTrace" class="data-flow-list"></div>
+                <div class="console-section">
+                  <h4>控制台输出</h4>
+                  <div id="consoleOutput" class="console-output"></div>
                 </div>
               </div>
-            </div>
-            <!-- 控制台标签页 -->
-            <div id="console-tab" class="tab-pane">
-              <div id="consoleOutput" class="console-output"></div>
             </div>
           </div>
         </div>

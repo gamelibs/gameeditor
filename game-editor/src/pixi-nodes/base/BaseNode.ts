@@ -1,5 +1,3 @@
-
-
 export abstract class BaseNode {
   properties: Record<string, any> = {};
   widgets: any[] = [];
@@ -132,5 +130,48 @@ export abstract class BaseNode {
     setTimeout(() => {
       this.adjustSizeBasedOnPorts(baseHeight, portHeightFactor, minHeight, widgetHeightFactor);
     }, 0);
+  }
+  
+  // 代码生成接口 - 类似Scratch的模板块
+  /**
+   * 获取节点的代码模板
+   * @returns 代码模板字符串，使用 {{varName}} 等占位符
+   */
+  getCodeTemplate(): string {
+    return '// 未实现代码模板';
+  }
+  
+  /**
+   * 获取节点的JS导入声明
+   * @returns 导入语句数组
+   */
+  getImports(): string[] {
+    return [];
+  }
+  
+  /**
+   * 获取变量名前缀，用于生成唯一变量名
+   * @returns 变量名前缀
+   */
+  getVariablePrefix(): string {
+    return 'node';
+  }
+  
+  /**
+   * 处理节点属性，转换为代码中使用的变量和值
+   * @param context 代码生成上下文
+   * @returns 属性值映射
+   */
+  processProperties(_context: any): Record<string, any> {
+    return { ...this.properties };
+  }
+  
+  /**
+   * 处理节点的输入连接
+   * @param context 代码生成上下文
+   * @returns 输入变量映射
+   */
+  processInputs(_context: any): Record<string, string> {
+    return {};
   }
 }

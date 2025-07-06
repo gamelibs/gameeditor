@@ -1,5 +1,5 @@
 import { LGraph, LGraphNode } from 'litegraph.js';
-import { MultiFileCodeGenerator } from './MultiFileCodeGenerator';
+import { ThreeTabCodeGenerator } from './ThreeTabCodeGenerator';
 
 /**
  * 三面板UI管理器
@@ -8,7 +8,7 @@ import { MultiFileCodeGenerator } from './MultiFileCodeGenerator';
 export class ThreePanelUI {
   private graph: LGraph;
   private gamePreviewCanvas!: HTMLCanvasElement;
-  private codeGenerator: MultiFileCodeGenerator;
+  private codeGenerator: ThreeTabCodeGenerator;
   
   // 面板元素
   private nodePanel!: HTMLElement;
@@ -24,10 +24,13 @@ export class ThreePanelUI {
   private currentSplitter: HTMLElement | null = null;
   private startX = 0;
   private startWidths: number[] = [];
+  
+  // 图形变化监听
+  private lastNodeCount = 0;
 
   constructor(graph: LGraph) {
     this.graph = graph;
-    this.codeGenerator = new MultiFileCodeGenerator(graph);
+    this.codeGenerator = new ThreeTabCodeGenerator(graph);
     this.initializeElements();
     this.setupEventListeners();
     this.setupPanelResizing();
@@ -44,14 +47,13 @@ export class ThreePanelUI {
     this.splitter1 = document.getElementById('splitter1')!;
     this.splitter2 = document.getElementById('splitter2')!;
     
-    // 获取游戏预览画布
-    this.gamePreviewCanvas = document.getElementById('gamePreviewCanvas') as HTMLCanvasElement;
+    // 游戏预览现在使用iframe，不需要canvas
+    // this.gamePreviewCanvas = document.getElementById('gamePreviewCanvas') as HTMLCanvasElement;
+    
+    console.log('✅ ThreePanelUI 元素初始化完成');
     
     // 在游戏预览区域添加信息显示
     this.addGameInfoDisplay();
-    
-    // 初始化画布大小
-    this.resizeGameCanvas();
   }
 
   private addGameInfoDisplay() {
@@ -103,6 +105,35 @@ export class ThreePanelUI {
         this.onGraphChanged('connectionChanged');
       };
     }
+    
+    // 设置实时图形变化监听
+    this.setupRealTimeGraphMonitoring();
+  }
+
+  private setupRealTimeGraphMonitoring() {
+    // 监听图形的实时变化
+    const checkGraphChanges = () => {
+      const currentNodes = (this.graph as any)._nodes || [];
+      const currentNodeCount = currentNodes.length;
+      
+      // 检查节点数量变化
+      if (this.lastNodeCount !== currentNodeCount) {
+        console.log(`📊 实时检测到节点数量变化: ${this.lastNodeCount} → ${currentNodeCount}`);
+        this.lastNodeCount = currentNodeCount;
+        this.onGraphChanged('nodeCountChanged');
+      }
+    };
+
+    // 每500毫秒检查一次图形变化，确保实时同步
+    setInterval(checkGraphChanges, 500);
+    
+    // 初始化节点计数
+    this.lastNodeCount = ((this.graph as any)._nodes || []).length;
+    
+    // 立即更新一次代码显示
+    setTimeout(() => {
+      this.updateGeneratedCode();
+    }, 100);
   }
 
   private setupFloatingSidebar() {
@@ -369,8 +400,8 @@ export class ThreePanelUI {
   private updateGeneratedCode() {
     // 更新所有代码显示
     this.updateCodeDisplay('game-logic');
-    this.updateCodeDisplay('index-html');
     this.updateCodeDisplay('runtime');
+    this.updateCodeDisplay('index-html');
   }
 
   private updateCodeDisplay(tabType: string) {
@@ -382,13 +413,17 @@ export class ThreePanelUI {
         code = this.codeGenerator.generateGameLogic();
         elementId = 'gameLogicDisplay';
         break;
-      case 'index-html':
-        code = this.codeGenerator.generateIndexHtml();
-        elementId = 'indexHtmlDisplay';
-        break;
       case 'runtime':
-        code = this.codeGenerator.generateRuntime();
+        code = this.codeGenerator.generateRuntimeEngine();
         elementId = 'runtimeDisplay';
+        break;
+      case 'index-html':
+        // 异步加载真实的build/index.html内容
+        this.loadRealIndexHtml();
+        return;
+      case 'debug-console':
+        code = this.codeGenerator.generateDebugConsole();
+        elementId = 'debugConsoleDisplay';
         break;
       default:
         return;
@@ -396,7 +431,41 @@ export class ThreePanelUI {
     
     const codeDisplay = document.getElementById(elementId);
     if (codeDisplay) {
-      codeDisplay.textContent = code;
+      // 对于带语法高亮的代码，使用innerHTML；否则使用textContent
+      if (code.includes('<span class=')) {
+        codeDisplay.innerHTML = code;
+      } else {
+        codeDisplay.textContent = code;
+      }
+    }
+  }
+
+  /**
+   * 异步加载真实的build/index.html内容并显示
+   */
+  private async loadRealIndexHtml() {
+    const elementId = 'indexHtmlDisplay';
+    const codeDisplay = document.getElementById(elementId);
+    
+    if (!codeDisplay) return;
+    
+    // 先显示加载状态
+    codeDisplay.innerHTML = `<div style="padding: 20px; color: #666; text-align: center;">
+      📄 正在读取 build/index.html 内容...
+    </div>`;
+    
+    try {
+      // 使用代码生成器的异步方法
+      const realContent = await this.codeGenerator.loadRealIndexHtml();
+      codeDisplay.textContent = realContent;
+      console.log('✅ 成功加载 build/index.html 内容到代码预览');
+    } catch (error) {
+      console.error('❌ 加载 build/index.html 失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      codeDisplay.innerHTML = `<div style="padding: 20px; color: #e74c3c; text-align: center;">
+        ❌ 无法读取 build/index.html<br><br>
+        错误信息: ${errorMessage}
+      </div>`;
     }
   }
 
@@ -524,7 +593,7 @@ export class ThreePanelUI {
     // 创建包含所有文件的ZIP下载
     const gameLogic = this.codeGenerator.generateGameLogic();
     const indexHtml = this.codeGenerator.generateIndexHtml();
-    const runtime = this.codeGenerator.generateRuntime();
+    const runtime = this.codeGenerator.generateRuntimeEngine();
     
     // 创建一个包含所有文件内容的文本
     const allFiles = `

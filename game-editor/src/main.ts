@@ -1,6 +1,24 @@
 import { setupPixiNodeLogger, LogLevels, LogLevelNames } from './pixiNodeLogger';
 import { generateGameProject } from './export/GameProjectGenerator';
 import { downloadGameProject, showSuccessMessage } from './utils/downloadUtils';
+import { LGraph, LGraphCanvas, LiteGraph } from 'litegraph.js';
+import 'litegraph.js/css/litegraph.css';
+import './style.css';
+
+// 导入三面板UI管理器
+import { ThreePanelUI } from './ui/ThreePanelUI';
+
+// 导入默认图表管理器
+import { DefaultGraphManager } from './utils/DefaultGraphManager';
+
+// 导入游戏预览管理器（切换到iframe版本）
+import { IFrameGamePreviewManager } from './runtime/IFrameGamePreviewManager';
+
+// 注册自定义节点
+import { registerCustomNodes } from './nodes';
+
+// 注册自定义节点
+registerCustomNodes();
 
 // 案例管理相关函数
 async function loadAvailableExamples() {
@@ -444,7 +462,19 @@ function createTopbarButtonGroup(graph: any, LiteGraph: any) {
     if (!running) {
       const graphData = graph.serialize();
       localStorage.setItem('game-editor-graph', JSON.stringify(graphData));
+      
+      // 更新iframe预览而不是直接运行图表
+      const previewManager = (window as any).IFrameGamePreviewManager?.getInstance() || IFrameGamePreviewManager.getInstance();
+      if (previewManager.isAvailable()) {
+        previewManager.updatePreview(graphData);
+        console.log('🎮 已更新iframe游戏预览');
+      } else {
+        console.warn('⚠️ iframe游戏预览不可用');
+      }
+      
+      // 可选：仍然运行本地图表用于调试
       graph.runStep();
+      
       runBtn.textContent = 'stop';
       running = true;
     } else {
@@ -523,17 +553,6 @@ function createTopbarButtonGroup(graph: any, LiteGraph: any) {
   topbar.appendChild(btnGroup);
 }
 
-import { LGraph, LGraphCanvas, LiteGraph } from 'litegraph.js';
-import 'litegraph.js/css/litegraph.css';
-import './style.css';
-
-// 导入三面板UI管理器
-import { ThreePanelUI } from './ui/ThreePanelUI';
-
-// 注册自定义节点
-import { registerCustomNodes } from './nodes';
-registerCustomNodes();
-
 // 2. 创建 LiteGraph 编辑器
 const graph = new LGraph();
 const canvasElement = document.getElementById('graphCanvas') as HTMLCanvasElement;
@@ -543,8 +562,65 @@ const canvas = new LGraphCanvas(canvasElement, graph);
 createTopbarButtonGroup(graph, LiteGraph);
 
 // 初始化三面板UI
-const threePanelUI = new ThreePanelUI(graph);
+new ThreePanelUI(graph);
 
+// 初始化iframe游戏预览管理器
+const gamePreviewManager = IFrameGamePreviewManager.getInstance();
+
+// 页面加载时的初始化流程
+async function initializeApp() {
+  try {
+    // 先初始化游戏预览（切换到iframe模式）
+    await gamePreviewManager.initialize('game-preview-panel');
+    console.log('🎮 iframe游戏预览管理器初始化完成');
+    
+    // 然后检查是否需要初始化默认图表
+    const savedGraph = localStorage.getItem('game-editor-graph');
+    if (!savedGraph) {
+      // 如果没有保存的图形，初始化默认节点
+      const defaultGraphManager = new DefaultGraphManager(graph);
+      await defaultGraphManager.initializeDefaultGraph();
+      console.log('✅ 初始化默认图表');
+    }
+  } catch (error) {
+    console.error('❌ 应用初始化失败:', error);
+  }
+}
+
+// 启动应用初始化
+initializeApp();
+
+// 为预览区域的全屏和刷新按钮添加事件处理
+function setupPreviewControls() {
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+  const refreshPreviewBtn = document.getElementById('refreshPreviewBtn');
+  
+  if (fullscreenBtn) {
+    fullscreenBtn.onclick = () => {
+      const previewManager = IFrameGamePreviewManager.getInstance();
+      if (previewManager.isAvailable()) {
+        previewManager.enterFullscreen();
+      } else {
+        console.warn('⚠️ iframe游戏预览不可用，无法进入全屏');
+      }
+    };
+  }
+  
+  if (refreshPreviewBtn) {
+    refreshPreviewBtn.onclick = () => {
+      const previewManager = IFrameGamePreviewManager.getInstance();
+      if (previewManager.isAvailable()) {
+        previewManager.refreshPreview();
+        console.log('🔄 已刷新iframe游戏预览');
+      } else {
+        console.warn('⚠️ iframe游戏预览不可用，无法刷新');
+      }
+    };
+  }
+}
+
+// 设置预览控制按钮
+setupPreviewControls();
 
 // 3. 侧边栏节点列表填充与点击添加
 
@@ -724,6 +800,7 @@ const savedGraph = localStorage.getItem('game-editor-graph');
 if (savedGraph) {
   try {
     graph.configure(JSON.parse(savedGraph));
+    console.log('✅ 恢复保存的图表');
   } catch (e) {
     console.warn('恢复节点数据失败:', e);
   }

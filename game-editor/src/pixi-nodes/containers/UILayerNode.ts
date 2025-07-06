@@ -313,6 +313,102 @@ export class UILayerNode extends BaseNode {
     this._hudContainer.removeChildren();
     this._lastHUDInputs.clear();
   }
+  
+  /**
+   * 获取变量名前缀
+   */
+  getVariablePrefix(): string {
+    return 'uiLayer';
+  }
+  
+  /**
+   * 获取导入语句
+   */
+  getImports(): string[] {
+    return [
+      "import { Container } from 'pixi.js';"
+    ];
+  }
+  
+  /**
+   * 生成代码模板
+   */
+  getCodeTemplate(): string {
+    return `
+// 创建 UI 层级容器系统
+const {{varName}} = new PIXI.Container();
+{{varName}}.sortableChildren = true;
+
+// 创建弹窗层 (最高层)
+const {{varName}}_popup = new PIXI.Container();
+{{varName}}_popup.zIndex = 30;
+{{varName}}_popup.name = 'PopupContainer';
+
+// 创建主UI层 (中层)
+const {{varName}}_mainUI = new PIXI.Container();
+{{varName}}_mainUI.zIndex = 20;
+{{varName}}_mainUI.name = 'MainUIContainer';
+
+// 创建 HUD 层 (底层)
+const {{varName}}_hud = new PIXI.Container();
+{{varName}}_hud.zIndex = 10;
+{{varName}}_hud.name = 'HUDContainer';
+
+// 添加所有层级到主容器
+{{varName}}.addChild({{varName}}_hud);
+{{varName}}.addChild({{varName}}_mainUI);
+{{varName}}.addChild({{varName}}_popup);
+
+// 确保根据 zIndex 排序
+{{varName}}.sortChildren();
+
+{{#if debug}}
+// 启用调试模式
+console.log('UI层级系统初始化 (调试模式开启)');
+{{/if}}
+
+{{#if inputs.popup}}
+// 处理 Popup 层输入
+{{> processContainerInput inputs.popup varName "_popup"}}
+{{/if}}
+
+{{#if inputs.mainUI}}
+// 处理 MainUI 层输入
+{{> processContainerInput inputs.mainUI varName "_mainUI"}}
+{{/if}}
+
+{{#if inputs.hud}}
+// 处理 HUD 层输入
+{{> processContainerInput inputs.hud varName "_hud"}}
+{{/if}}
+`;
+  }
+  
+  /**
+   * 处理节点属性
+   */
+  processProperties(context: any): Record<string, any> {
+    return {
+      debug: this.properties.debug || false,
+      uniqueId: this.properties.uniqueId || `ui_layer_${Date.now()}`
+    };
+  }
+  
+  /**
+   * 处理节点输入
+   */
+  processInputs(context: any): Record<string, string> {
+    const inputs: Record<string, string> = {};
+    
+    // 获取连接的输入变量名
+    if (context.getInputVarName) {
+      inputs.popup = context.getInputVarName(this, 0);
+      inputs.mainUI = context.getInputVarName(this, 1);
+      inputs.hud = context.getInputVarName(this, 2);
+    }
+    
+    return inputs;
+  }
 }
 
 /**
