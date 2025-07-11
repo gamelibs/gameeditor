@@ -11,6 +11,7 @@ export abstract class BaseNode {
   declare size: number[];
   declare boxcolor: string;
   declare color: string;
+  declare flags: any;
 
   // LiteGraph节点方法（仅类型声明）
   declare addWidget: (type: string, name: string, value: any, callback: (value: any) => void) => any;

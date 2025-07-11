@@ -120,6 +120,7 @@ export class DisplayCollectorNode extends BaseNode {
     let hasValidObjects = false;
     for (let i = 0; i < activeInputCount; i++) {
       const displayObj = this.getInputData(i);
+      
       if (!displayObj) continue;
       
       try {
@@ -148,11 +149,6 @@ export class DisplayCollectorNode extends BaseNode {
       } catch (error: any) {
         console.error(`DisplayCollectorNode: Error adding object: ${error.message || 'Unknown error'}`);
       }
-    }
-    
-    // 如果没有有效对象，打印警告
-    if (!hasValidObjects) {
-      console.warn(`DisplayCollectorNode (${this.properties.uniqueId}): No valid display objects found on inputs.`);
     }
     
     // 创建一个数组作为输出，而不是容器本身

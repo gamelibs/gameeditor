@@ -23,6 +23,12 @@ import { registerGameLayerNode } from './pixi-nodes/containers/GameLayerNode';
 import { registerSystemLayerNode } from './pixi-nodes/containers/SystemLayerNode';
 import { registerDisplayCollectorNode } from './pixi-nodes/containers/DisplayCollectorNode';
 
+// 导入Tools类别节点
+import { registerNumberStorageNode } from './pixi-nodes/tools/NumberStorageNode';
+import { registerNumberOperationNode } from './pixi-nodes/tools/NumberOperationNode';
+import { registerEventToNumberNode } from './pixi-nodes/tools/EventToNumberNode';
+import { registerTextDisplayNode } from './pixi-nodes/render/TextDisplayNode';
+
 
 export function registerCustomNodes() {
   // 节点类型说明与颜色配置已迁移至 nodeColors.ts 统一管理
@@ -49,6 +55,12 @@ export function registerCustomNodes() {
   registerPixiTriangleNode(LiteGraph);
   registerImageLoaderNode(LiteGraph);
   registerTextureNode(LiteGraph);
+  
+  // 注册Tools类别节点
+  registerNumberStorageNode(LiteGraph);
+  registerNumberOperationNode(LiteGraph);
+  registerEventToNumberNode(LiteGraph);
+  registerTextDisplayNode(LiteGraph);
   
   // 其它节点实现后，依次在此注册
 }

@@ -251,12 +251,15 @@ export function registerPixiButtonNode(LiteGraph: any) {
             label: this.properties.label // 添加按钮标签，方便识别
           };
           
-          // 使用两种方式触发事件，确保事件能被正确处理
+          // 使用多种方式触发事件，确保事件能被正确处理
           // 1. 通过trigger方法传递事件名称
           this.trigger("click", eventData);
           
           // 2. 直接使用triggerSlot，适用于LiteGraph的事件系统
           this.triggerSlot(1, eventData);
+          
+          // 3. 直接设置输出数据（添加这个方法）
+          this.setOutputData(1, eventData);
           
         } catch (err: any) {
           console.error('❌ 触发事件时出错:', err);

@@ -7,54 +7,80 @@ async function loadAvailableExamples() {
   try {
     const baseUrl = 'examples/basic/';
     
-    // 由于浏览器限制无法直接扫描目录，尝试常见的案例目录名
-    const potentialExamples = [
-      'hello-world',
-      'button-click',
-      'button-only',
-      'button-click-simple',
-      'auto-resize-test',
-      'basic-shapes',
-      'ui-demo',
-      'resource-test'
-    ];
+    // 读取案例配置文件
+    let exampleConfigs = [];
+    try {
+      const configResponse = await fetch(`${baseUrl}examples.json`);
+      if (configResponse.ok) {
+        const configData = await configResponse.json();
+        exampleConfigs = configData.examples || [];
+        console.log(`📋 从配置文件加载到 ${exampleConfigs.length} 个案例配置`);
+      } else {
+        throw new Error('配置文件不存在');
+      }
+    } catch (error) {
+      console.warn('⚠️ 无法加载案例配置文件，回退到扫描模式:', error);
+      // 回退到旧的扫描方式
+      const potentialExamples = ['hello-world', 'button-click', 'number-tools'];
+      exampleConfigs = potentialExamples.map(id => ({ id, enabled: true }));
+    }
     
-    // 并行检查每个潜在的案例目录
-    const loadPromises = potentialExamples.map(async (exampleId: string) => {
-      try {
-        // 首先检查 description.json 是否存在
-        const descResponse = await fetch(`${baseUrl}${exampleId}/description.json`);
-        if (!descResponse.ok) {
-          return null; // 没有 description.json，跳过
-        }
-        
-        // 检查 graph.json 是否存在
-        const graphResponse = await fetch(`${baseUrl}${exampleId}/graph.json`);
-        if (!graphResponse.ok) {
-          console.warn(`案例 ${exampleId} 缺少 graph.json，跳过`);
+    // 并行验证和加载所有启用的案例
+    const loadPromises = exampleConfigs
+      .filter((config: any) => config.enabled !== false) // 只加载启用的案例
+      .map(async (config: any) => {
+        try {
+          const exampleId = config.id;
+          
+          // 检查 graph.json 是否存在
+          const graphResponse = await fetch(`${baseUrl}${exampleId}/graph.json`);
+          if (!graphResponse.ok) {
+            console.warn(`📁 案例 ${exampleId} 的 graph.json 不存在，跳过`);
+            return null;
+          }
+          
+          // 尝试加载 description.json，如果失败则使用配置文件中的信息
+          let exampleInfo = {
+            name: config.name || exampleId,
+            category: config.category || '基础示例',
+            description: config.description || '无描述'
+          };
+          
+          try {
+            const descResponse = await fetch(`${baseUrl}${exampleId}/description.json`);
+            if (descResponse.ok) {
+              const descData = await descResponse.json();
+              // 优先使用 description.json 中的信息，配置文件作为备用
+              exampleInfo = {
+                name: descData.name || config.name || exampleId,
+                category: descData.category || config.category || '基础示例',
+                description: descData.description || config.description || '无描述'
+              };
+            }
+          } catch (descError) {
+            console.info(`📝 案例 ${exampleId} 使用配置文件信息（description.json 不可用）`);
+          }
+          
+          return {
+            id: exampleId,
+            name: exampleInfo.name,
+            category: exampleInfo.category,
+            description: exampleInfo.description,
+            path: `${baseUrl}${exampleId}/graph.json`,
+            difficulty: config.difficulty || 'beginner',
+            tags: config.tags || []
+          };
+        } catch (error) {
+          console.warn(`❌ 加载案例 ${config.id} 失败:`, error);
           return null;
         }
-        
-        // 加载案例描述信息
-        const exampleInfo = await descResponse.json();
-        return {
-          id: exampleId,
-          name: exampleInfo.name || exampleId,
-          category: exampleInfo.category || '基础示例',
-          description: exampleInfo.description || '无描述',
-          path: `${baseUrl}${exampleId}/graph.json`
-        };
-      } catch (error) {
-        // 静默忽略不存在的目录
-        return null;
-      }
-    });
+      });
     
-    // 等待所有检查完成，过滤掉不存在的案例
+    // 等待所有检查完成，过滤掉失败的案例
     const results = await Promise.all(loadPromises);
     const validExamples = results.filter(example => example !== null);
     
-    console.log(`✅ 自动发现并加载 ${validExamples.length} 个有效案例:`, validExamples.map(ex => ex.id));
+    console.log(`✅ 成功加载 ${validExamples.length} 个有效案例:`, validExamples.map(ex => ex.id));
     return validExamples;
   } catch (error) {
     console.error('❌ 扫描案例失败:', error);
@@ -155,6 +181,11 @@ function showExamplesDialog(graph: any) {
 
   // 加载案例列表
   loadAvailableExamples().then(examples => {
+    if (examples.length === 0) {
+      examplesContainer.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">没有找到可用的案例</div>';
+      return;
+    }
+    
     const categories = [...new Set(examples.map(ex => ex.category))];
     
     categories.forEach(category => {
@@ -173,29 +204,74 @@ function showExamplesDialog(graph: any) {
         const exampleItem = document.createElement('div');
         exampleItem.style.border = '1px solid #ddd';
         exampleItem.style.borderRadius = '4px';
-        exampleItem.style.padding = '10px';
+        exampleItem.style.padding = '12px';
         exampleItem.style.marginBottom = '8px';
         exampleItem.style.cursor = 'pointer';
-        exampleItem.style.transition = 'background-color 0.2s';
+        exampleItem.style.transition = 'all 0.2s';
+        
+        // 案例标题
+        const exampleHeader = document.createElement('div');
+        exampleHeader.style.display = 'flex';
+        exampleHeader.style.justifyContent = 'space-between';
+        exampleHeader.style.alignItems = 'center';
+        exampleHeader.style.marginBottom = '6px';
         
         const exampleName = document.createElement('div');
         exampleName.textContent = example.name;
         exampleName.style.fontWeight = 'bold';
         exampleName.style.color = '#333';
-        exampleItem.appendChild(exampleName);
+        exampleHeader.appendChild(exampleName);
         
+        // 难度标识
+        if ((example as any).difficulty) {
+          const difficultyBadge = document.createElement('span');
+          difficultyBadge.textContent = (example as any).difficulty;
+          difficultyBadge.style.fontSize = '10px';
+          difficultyBadge.style.padding = '2px 6px';
+          difficultyBadge.style.borderRadius = '3px';
+          difficultyBadge.style.backgroundColor = (example as any).difficulty === 'beginner' ? '#e8f5e8' : '#e8f0ff';
+          difficultyBadge.style.color = (example as any).difficulty === 'beginner' ? '#2d5a2d' : '#1e40af';
+          exampleHeader.appendChild(difficultyBadge);
+        }
+        
+        exampleItem.appendChild(exampleHeader);
+        
+        // 案例描述
         const exampleDesc = document.createElement('div');
         exampleDesc.textContent = example.description;
         exampleDesc.style.fontSize = '12px';
         exampleDesc.style.color = '#666';
-        exampleDesc.style.marginTop = '4px';
+        exampleDesc.style.marginBottom = '8px';
         exampleItem.appendChild(exampleDesc);
+        
+        // 标签
+        if ((example as any).tags && (example as any).tags.length > 0) {
+          const tagsContainer = document.createElement('div');
+          tagsContainer.style.display = 'flex';
+          tagsContainer.style.flexWrap = 'wrap';
+          tagsContainer.style.gap = '4px';
+          
+          (example as any).tags.forEach((tag: string) => {
+            const tagSpan = document.createElement('span');
+            tagSpan.textContent = tag;
+            tagSpan.style.fontSize = '10px';
+            tagSpan.style.padding = '1px 4px';
+            tagSpan.style.backgroundColor = '#f0f0f0';
+            tagSpan.style.color = '#666';
+            tagSpan.style.borderRadius = '2px';
+            tagsContainer.appendChild(tagSpan);
+          });
+          
+          exampleItem.appendChild(tagsContainer);
+        }
         
         exampleItem.onmouseover = () => {
           exampleItem.style.backgroundColor = '#f5f5f5';
+          exampleItem.style.borderColor = '#4ECDC4';
         };
         exampleItem.onmouseout = () => {
           exampleItem.style.backgroundColor = '';
+          exampleItem.style.borderColor = '#ddd';
         };
         
         exampleItem.onclick = () => {
@@ -208,6 +284,9 @@ function showExamplesDialog(graph: any) {
       
       examplesContainer.appendChild(categorySection);
     });
+  }).catch(error => {
+    console.error('加载案例列表失败:', error);
+    examplesContainer.innerHTML = '<div style="text-align: center; color: #f00; padding: 20px;">加载案例失败</div>';
   });
 
   // 按钮区域

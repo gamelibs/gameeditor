@@ -1,0 +1,78 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-07-04",
+  "description": "游戏编辑器案例配置文件",
+  "metadata": {
+    "totalExamples": 6,
+    "categories": ["基础示例"],
+    "difficulties": ["beginner", "intermediate"]
+  },
+  "examples": [
+    {
+      "id": "hello-world",
+      "name": "Hello World",
+      "category": "基础示例",
+      "description": "最基本的显示案例，显示一个简单的文字",
+      "enabled": true,
+      "difficulty": "beginner",
+      "tags": ["基础", "文本", "显示"],
+      "nodes": ["scene/pixiStage", "render/text", "containers/DisplayCollector"],
+      "features": ["文本显示", "基础渲染"]
+    },
+    {
+      "id": "button-click",
+      "name": "Button Click",
+      "category": "基础示例", 
+      "description": "交互式按钮案例，展示点击事件处理和计数器功能",
+      "enabled": true,
+      "difficulty": "beginner",
+      "tags": ["按钮", "事件", "计数器"],
+      "nodes": ["scene/pixiStage", "render/button", "render/clickCounter", "containers/DisplayCollector"],
+      "features": ["用户交互", "事件处理", "状态管理"]
+    },
+    {
+      "id": "test-event",
+      "name": "Event To Number Test",
+      "category": "基础示例",
+      "description": "测试 EventToNumber - 点击按钮应该递增计数，显示 'Count: 1', 'Count: 2' 等",
+      "enabled": true,
+      "difficulty": "beginner",
+      "tags": ["事件", "数值", "交互"],
+      "nodes": ["scene/pixiStage", "render/button", "tools/eventToNumber", "render/textDisplay", "containers/DisplayCollector"],
+      "features": ["事件处理", "数值递增", "用户交互"]
+    },
+    {
+      "id": "test-operation-simple",
+      "name": "Simple Operation Chain",
+      "category": "基础示例",
+      "description": "简单的运算链测试：EventToNumber(increment) -> NumberOperation(×10) -> TextDisplay",
+      "enabled": true,
+      "difficulty": "beginner",
+      "tags": ["事件", "数值", "运算", "链式"],
+      "nodes": ["scene/pixiStage", "render/button", "tools/eventToNumber", "tools/numberOperation", "render/textDisplay", "containers/DisplayCollector"],
+      "features": ["事件转数值", "数值运算", "链式数据流"]
+    },
+    {
+      "id": "test-storage-simple",
+      "name": "Simple Storage Test",
+      "category": "基础示例",
+      "description": "简单的存储测试：NumberStorage(42) -> TextDisplay，应该显示 'Storage: 42'",
+      "enabled": true,
+      "difficulty": "beginner",
+      "tags": ["数值", "存储", "基础"],
+      "nodes": ["scene/pixiStage", "tools/numberStorage", "render/textDisplay"],
+      "features": ["数值存储", "基础数据流"]
+    },
+    {
+      "id": "test-complete-chain",
+      "name": "Complete Number Tools Chain",
+      "category": "基础示例",
+      "description": "完整的数值工具链：Button -> EventToNumber(pulse) -> NumberOperation(+Storage) -> NumberStorage",
+      "enabled": true,
+      "difficulty": "intermediate",
+      "tags": ["事件", "数值", "运算", "存储", "完整链"],
+      "nodes": ["scene/pixiStage", "render/button", "tools/eventToNumber", "tools/numberOperation", "tools/numberStorage", "render/textDisplay", "containers/DisplayCollector"],
+      "features": ["完整数值工具链", "反馈回路", "累加逻辑"]
+    }
+  ]
+}
