@@ -2,14 +2,6 @@ import { setupPixiNodeLogger, LogLevels, LogLevelNames } from './pixiNodeLogger'
 import { generateGameProject } from './export/GameProjectGenerator';
 import { downloadGameProject, showSuccessMessage } from './utils/downloadUtils';
 
-import { NodeEditor } from 'rete';
-import { ConnectionPlugin } from 'rete-connection-plugin';
-import { AreaPlugin } from 'rete-area-plugin';
-import { Input, Output, Socket } from 'rete';
-import './style.css';
-
-
-
 // 案例管理相关函数
 async function loadAvailableExamples() {
   try {
@@ -452,19 +444,7 @@ function createTopbarButtonGroup(graph: any, LiteGraph: any) {
     if (!running) {
       const graphData = graph.serialize();
       localStorage.setItem('game-editor-graph', JSON.stringify(graphData));
-      
-      // 更新iframe预览而不是直接运行图表
-      const previewManager = (window as any).IFrameGamePreviewManager?.getInstance() //|| IFrameGamePreviewManager.getInstance();
-      if (previewManager.isAvailable()) {
-        previewManager.updatePreview(graphData);
-        console.log('🎮 已更新iframe游戏预览');
-      } else {
-        console.warn('⚠️ iframe游戏预览不可用');
-      }
-      
-      // 可选：仍然运行本地图表用于调试
       graph.runStep();
-      
       runBtn.textContent = 'stop';
       running = true;
     } else {
@@ -543,40 +523,208 @@ function createTopbarButtonGroup(graph: any, LiteGraph: any) {
   topbar.appendChild(btnGroup);
 }
 
+import { LGraph, LGraphCanvas, LiteGraph } from 'litegraph.js';
+import 'litegraph.js/css/litegraph.css';
+import './style.css';
 
-// 1. 获取 Rete 编辑器容器
-const reteContainer = document.getElementById('rete-editor');
-if (!reteContainer) {
-  throw new Error('找不到rete-editor容器');
+
+// 注册自定义节点
+import { registerCustomNodes } from './nodes';
+registerCustomNodes();
+
+
+// 2. 创建 LiteGraph 编辑器
+const graph = new LGraph();
+const canvasElement = document.getElementById('graphCanvas') as HTMLCanvasElement;
+const canvas = new LGraphCanvas(canvasElement, graph);
+
+// 创建全局顶栏按钮组（此时 graph 已初始化）
+createTopbarButtonGroup(graph, LiteGraph);
+
+
+// 3. 侧边栏节点列表填充与点击添加
+
+// 创建可折叠分组的辅助函数
+function createCollapsibleSection(title: string, listElement: HTMLUListElement) {
+  const section = document.createElement('div');
+  section.className = 'collapsible-section';
+
+  const header = document.createElement('div');
+  header.className = 'collapsible-header';
+  header.textContent = title + ' >';
+  header.style.cursor = 'pointer';
+
+  // 默认收缩
+  listElement.style.display = 'none';
+
+  header.onclick = () => {
+    const isCollapsed = listElement.style.display === 'none';
+    listElement.style.display = isCollapsed ? 'block' : 'none';
+    header.textContent = title + (isCollapsed ? ' v' : ' >');
+  };
+
+  section.appendChild(header);
+  section.appendChild(listElement);
+  return section;
 }
 
-// 2. 创建 Rete 编辑器实例
-const reteEditor = new NodeEditor();
-reteEditor.use(ConnectionPlugin);
-reteEditor.use(AreaPlugin);
+function populateNodeSidebar() {
+  const nodeListElement = document.getElementById('node-list');
+  if (!nodeListElement) return;
+  nodeListElement.innerHTML = '';
 
-// 3. 添加一个简单节点（示例）
-// const node = new Node();
-// node.addInput(new Input('num1', 'Number', socket));
-// node.addInput(new Input('num2', 'Number', socket));
-// node.addOutput(new Output('result', 'Number', socket));
+  // Main categories
+  const liteList = document.createElement('ul');
+  liteList.style.display = 'block';
+  const gameList = document.createElement('ul');
+  gameList.style.display = 'block';
 
-// reteEditor.addNode(node);
+  // Create sub-categories for gamePixi
+  const renderShapesList = document.createElement('ul');
+  const renderUiList = document.createElement('ul');
+  const containersList = document.createElement('ul');
+  const resourcesList = document.createElement('ul');
+  const scenesList = document.createElement('ul');
+  const eventsList = document.createElement('ul');
+  const toolsList = document.createElement('ul');
+  // const othersList = document.createElement('ul');
 
-const container = document.getElementById('rete-editor');
-if (!container) {
-  throw new Error('未找到编辑器容器 #rete-editor');
+  // Add class names for styling
+  renderShapesList.className = 'node-category render-node';
+  renderUiList.className = 'node-category render-node';
+  containersList.className = 'node-category container-node';
+  resourcesList.className = 'node-category resource-node';
+  scenesList.className = 'node-category scene-node';
+  eventsList.className = 'node-category event-node';
+  toolsList.className = 'node-category tool-node';
+  // othersList.className = 'node-category';
+
+  // Create category titles
+  const renderShapesTitle = document.createElement('li');
+  renderShapesTitle.textContent = 'Shape Rendering';
+  renderShapesTitle.className = 'category-title';
+  gameList.appendChild(renderShapesTitle);
+  gameList.appendChild(renderShapesList);
+
+  const renderUiTitle = document.createElement('li');
+  renderUiTitle.textContent = 'UI Rendering';
+  renderUiTitle.className = 'category-title';
+  gameList.appendChild(renderUiTitle);
+  gameList.appendChild(renderUiList);
+
+  const containersTitle = document.createElement('li');
+  containersTitle.textContent = 'Containers';
+  containersTitle.className = 'category-title';
+  gameList.appendChild(containersTitle);
+  gameList.appendChild(containersList);
+
+  const resourcesTitle = document.createElement('li');
+  resourcesTitle.textContent = 'Resources';
+  resourcesTitle.className = 'category-title';
+  gameList.appendChild(resourcesTitle);
+  gameList.appendChild(resourcesList);
+
+  const scenesTitle = document.createElement('li');
+  scenesTitle.textContent = 'Scenes';
+  scenesTitle.className = 'category-title';
+  gameList.appendChild(scenesTitle);
+  gameList.appendChild(scenesList);
+
+  const eventsTitle = document.createElement('li');
+  eventsTitle.textContent = 'Events';
+  eventsTitle.className = 'category-title';
+  gameList.appendChild(eventsTitle);
+  gameList.appendChild(eventsList);
+
+  const toolsTitle = document.createElement('li');
+  toolsTitle.textContent = 'Tools';
+  toolsTitle.className = 'category-title';
+  gameList.appendChild(toolsTitle);
+  gameList.appendChild(toolsList);
+
+  // const othersTitle = document.createElement('li');
+  // othersTitle.textContent = 'Others';
+  // othersTitle.className = 'category-title';
+  // gameList.appendChild(othersTitle);
+  // gameList.appendChild(othersList);
+
+  for (const nodeTypePath in LiteGraph.registered_node_types) {
+    if (LiteGraph.registered_node_types.hasOwnProperty(nodeTypePath)) {
+      const nodeConstructor = LiteGraph.registered_node_types[nodeTypePath];
+      const li = document.createElement('li');
+      
+      // Get node title or path
+      const parts = nodeTypePath.split('/');
+      const shortName = parts[parts.length - 1];
+      const title = nodeConstructor.prototype && nodeConstructor.prototype.title 
+        ? nodeConstructor.prototype.title 
+        : shortName;
+      
+      li.textContent = title;
+      li.title = nodeTypePath;
+      
+      li.onclick = () => {
+        const node = LiteGraph.createNode(nodeTypePath);
+        if (node) {
+          const rect = canvasElement.getBoundingClientRect();
+          const center = canvas.convertOffsetToCanvas([rect.width / 2, rect.height / 2]);
+          node.pos = [center[0] - (node.size?.[0] || 100) / 2, center[1] - (node.size?.[1] || 40) / 2];
+          graph.add(node);
+        }
+      };
+      
+      // Sort nodes into categories
+      if (nodeTypePath.startsWith('render/')) {
+        // Shape rendering nodes vs UI rendering nodes
+        if (nodeTypePath === 'render/rect' || 
+            nodeTypePath === 'render/circle' || 
+            nodeTypePath === 'render/line' || 
+            nodeTypePath === 'render/triangle') {
+          renderShapesList.appendChild(li);
+        } else {
+          renderUiList.appendChild(li);
+        }
+      } else if (nodeTypePath.startsWith('pixi/containers/')) {
+        containersList.appendChild(li);
+      } else if (nodeTypePath.startsWith('resource/') || nodeTypePath.includes('Resource')) {
+        resourcesList.appendChild(li);
+      } else if (nodeTypePath.startsWith('scene/')) {
+        scenesList.appendChild(li);
+      } else if (nodeTypePath.startsWith('event/')) {
+        eventsList.appendChild(li);
+      } else if (nodeTypePath.startsWith('tools/')) {
+        toolsList.appendChild(li);
+      } else if ((nodeTypePath.startsWith('pixi/') || 
+                 nodeTypePath.startsWith('basic/') || 
+                 nodeTypePath === 'basic') && 
+                 nodeTypePath.indexOf('/') !== -1) {
+        // Only put actual Pixi nodes in Others category
+        // othersList.appendChild(li);
+      } else {
+        // Default LiteGraph nodes belong in the Basic category
+        liteList.appendChild(li);
+      }
+    }
+  }
+
+  // Create collapsible sections
+  nodeListElement.appendChild(createCollapsibleSection('Basic', liteList));
+  nodeListElement.appendChild(createCollapsibleSection('GamePixi', gameList));
+}
+populateNodeSidebar();
+
+
+
+// 页面加载时自动恢复节点数据
+const savedGraph = localStorage.getItem('game-editor-graph');
+if (savedGraph) {
+  try {
+    graph.configure(JSON.parse(savedGraph));
+  } catch (e) {
+    console.warn('恢复节点数据失败:', e);
+  }
 }
 
-const editor = new NodeEditor('demo@0.1.0');
-editor.use(ConnectionPlugin);
-editor.use(AreaPlugin);
-
-// 创建节点示例
-const numSocket = new Socket('Number');
-
-const node = editor.createNode('Number');
-node.addInput(new Input('num', 'Number', numSocket));
-node.addOutput(new Output('num', 'Number', numSocket));
-
-editor.addNode(node);
+// 默认不自动运行，需点击运行按钮
+window.addEventListener('resize', () => canvas.resize());
+canvas.resize();

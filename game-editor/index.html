@@ -8,112 +8,12 @@
 <body>
   <div id="topbar"></div>
   <div id="app-container">
-    <!-- 浮动节点导航面板 -->
-    <div id="floating-sidebar" class="floating-sidebar">
-      <div class="sidebar-content" id="sidebarContent">
-        <div class="sidebar-header">
-          <h3>节点库</h3>
-          <button class="close-btn" id="closeSidebar">✕</button>
-        </div>
-        <div class="sidebar-body">
-          <ul id="node-list"></ul>
-        </div>
-      </div>
+    <div id="sidebar">
+      <h2>Nodes</h2>
+      <ul id="node-list"></ul>
     </div>
-
-
-    <!-- 主要内容区域 -->
     <div id="main-content">
-      <!-- 节点编辑器区域 (左侧, 50%) -->
-      <div id="node-editor-panel" class="editor-panel">
-        <div class="panel-header">
-          <h3>🎮 节点编辑器</h3>
-          <div class="panel-controls">
-            <button id="openNodesBtn" class="panel-btn">📦 节点库</button>
-            <button id="runGameBtn" class="panel-btn">▶️ 运行</button>
-            <button id="pauseGameBtn" class="panel-btn">⏸️ 暂停</button>
-            <button id="resetGameBtn" class="panel-btn">🔄 重置</button>
-          </div>
-        </div>
-        <!-- <canvas id="graphCanvas"></canvas> -->
-         <div id="rete-editor" style="width:100%;height:100%;"></div>
-      </div>
-
-      <!-- 垂直分割条1 -->
-      <div class="vertical-splitter" id="splitter1"></div>
-
-      <!-- 游戏预览区域 -->
-      <div id="game-preview-panel" class="editor-panel">
-        <div class="panel-header">
-          <h3>🎯 游戏预览</h3>
-          <div class="panel-controls">
-            <button id="fullscreenBtn" class="panel-btn">🔍 全屏</button>
-            <button id="refreshPreviewBtn" class="panel-btn">🔄 刷新</button>
-          </div>
-        </div>
-        <div class="game-preview-content">
-          <!-- iframe将在此处动态加载 -->
-          <div id="gameLoadingIndicator" class="loading-indicator">
-            <div class="loading-spinner"></div>
-            <span>加载游戏中...</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 垂直分割条2 -->
-      <div class="vertical-splitter" id="splitter2"></div>
-
-      <!-- 代码预览区域 -->
-      <div id="code-preview-panel" class="editor-panel">
-        <div class="panel-header">
-          <h3>📄 实时代码</h3>
-          <div class="panel-controls">
-            <button id="copyCodeBtn" class="panel-btn">📋 复制</button>
-            <button id="downloadCodeBtn" class="panel-btn">💾 下载</button>
-          </div>
-        </div>
-        <div class="code-preview-content">
-          <div class="code-tabs">
-            <div class="code-tab active" data-tab="game-logic">🎮 游戏逻辑</div>
-            <div class="code-tab" data-tab="runtime">⚡ 运行时引擎</div>
-            <div class="code-tab" data-tab="index-html">� index.html</div>
-            <div class="code-tab" data-tab="debug-console">� 调试控制台</div>
-          </div>
-          <div class="code-tab-content">
-            <!-- 游戏逻辑标签页 -->
-            <div id="game-logic-tab" class="tab-pane active">
-              <pre id="gameLogicDisplay" class="code-display"><code>// 等待节点图变化...</code></pre>
-            </div>
-            <!-- 运行时引擎标签页 -->
-            <div id="runtime-tab" class="tab-pane">
-              <pre id="runtimeDisplay" class="code-display"><code>// 游戏运行时引擎</code></pre>
-            </div>
-            <!-- index.html标签页 -->
-            <div id="index-html-tab" class="tab-pane">
-              <pre id="indexHtmlDisplay" class="code-display"><code><!-- 游戏入口HTML --></code></pre>
-            </div>
-            <!-- 调试控制台标签页 -->
-            <div id="debug-console-tab" class="tab-pane">
-              <div class="debug-console-container">
-                <div class="debug-info">
-                  <div class="debug-section">
-                    <h4>节点执行状态</h4>
-                    <div id="nodeExecutionStatus" class="node-status-list"></div>
-                  </div>
-                  <div class="debug-section">
-                    <h4>数据流追踪</h4>
-                    <div id="dataFlowTrace" class="data-flow-list"></div>
-                  </div>
-                </div>
-                <div class="console-section">
-                  <h4>控制台输出</h4>
-                  <div id="consoleOutput" class="console-output"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <canvas id="graphCanvas"></canvas>
     </div>
   </div>
   <script type="module" src="/src/main.ts"></script>

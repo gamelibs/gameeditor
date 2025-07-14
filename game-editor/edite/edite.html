@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+  <meta charset="UTF-8">
+  <title>原子逻辑编辑器</title>
+  <link rel="stylesheet" href="/edite/edite.css">
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    #editor-canvas {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+    }
+
+    #node-nav-container {
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <button id="settings-btn">⚙️ 设置</button>
+  </div>
+  <div id="node-creator-bar">
+    <span style="color:#eee;margin-right:8px;">创建原子节点：</span>
+    <input id="node-label" type="text" placeholder="节点名称" style="width:100px;">
+    <select id="input-type">
+      <option value="none">无输入</option>
+      <option value="number">输入: 数字</option>
+      <option value="string">输入: 字符串</option>
+    </select>
+    <select id="output-type">
+      <option value="none">无输出</option>
+      <option value="number">输出: 数字</option>
+      <option value="string">输出: 字符串</option>
+    </select>
+    <button id="create-node-btn">创建</button>
+  </div>
+  <canvas id="editor-canvas"></canvas>
+  <!-- 顶部导航栏容器，支持一级分类和二级节点下拉 -->
+  <nav id="node-nav-container" class="node-nav">
+    <!--
+      一级分类：如“渲染”、“容器”、“资源”等
+      鼠标悬停显示二级节点列表
+      每个分类和节点可用不同颜色区分
+      交互友好，便于快速查找和添加节点
+    -->
+    <!-- JS 会动态填充分类和节点 -->
+  </nav>
+  <div id="property-panel">
+    <h3>Node Properties</h3>
+    <label>Name: <input id="node-name" type="text"></label>
+    <button id="save-properties">Save</button>
+  </div>
+  <!-- 设置弹窗 -->
+  <div id="settings-modal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.4);z-index:100;align-items:center;justify-content:center;">
+    <div style="background:#232323;padding:24px 32px;border-radius:8px;min-width:260px;box-shadow:0 4px 24px #0008;">
+      <h3 style="margin-top:0;color:#4ECDC4;">编辑器设置</h3>
+      <div style="margin-bottom:16px;">
+        <label style="color:#eee;">主场景背景色: <input id="bg-color-picker" type="color" value="#222222"></label>
+      </div>
+      <button id="close-settings">关闭</button>
+    </div>
+  </div>
+  <script type="module" src="/edite/edite.js"></script>
+</body>
+</html>

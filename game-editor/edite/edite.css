@@ -1,0 +1,228 @@
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #181818;
+  font-family: Arial, sans-serif;
+}
+#toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 48px;
+  background: #232323;
+  border-bottom: 1px solid #444;
+  display: flex;
+  align-items: center;
+  z-index: 10;
+  box-sizing: border-box;
+  padding: 0 16px;
+}
+#settings-btn {
+  margin-right: 12px;
+  background: #333;
+  border: 1px solid #555;
+  color: #eee;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+#settings-btn:hover {
+  background: #4ECDC4;
+  color: #222;
+}
+#node-creator-bar {
+  position: fixed;
+  top: 48px;
+  left: 0;
+  width: 100vw;
+  height: 48px;
+  background: #232323;
+  border-bottom: 1px solid #444;
+  display: flex;
+  align-items: center;
+  z-index: 11;
+  box-sizing: border-box;
+  padding: 0 16px;
+  gap: 8px;
+}
+#editor-canvas {
+  position: absolute;
+  top: 96px;
+  left: 0;
+  width: calc(100vw - 220px);
+  height: calc(100vh - 96px);
+  display: block;
+  background: #222;
+  border: none;
+}
+#property-panel {
+  position: absolute;
+  top: 60px;
+  right: 10px;
+  min-width: 220px;
+  background: #232323;
+  color: #eee;
+  border: 1px solid #444;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 10px;
+  display: none;
+  z-index: 20;
+}
+#sidebar {
+  position: fixed;
+  top: 96px;
+  right: 0;
+  width: 220px;
+  height: calc(100vh - 96px);
+  background: #232323;
+  border-left: 1px solid #444;
+  color: #eee;
+  z-index: 12;
+  box-sizing: border-box;
+  padding: 12px 8px 8px 16px;
+  overflow-y: auto;
+}
+h3 {
+  margin-top: 0;
+  color: #4ECDC4;
+}
+label, input, button {
+  color: #eee;
+}
+input[type="text"] {
+  background: #222;
+  border: 1px solid #555;
+  color: #eee;
+  padding: 4px;
+  border-radius: 3px;
+}
+button {
+  background: #333;
+  border: 1px solid #555;
+  color: #eee;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+button:hover {
+  background: #4ECDC4;
+  color: #222;
+}
+#node-label, #input-type, #output-type, #create-node-btn {
+  font-size: 15px;
+  height: 32px;
+  border-radius: 4px;
+  border: 1px solid #555;
+  background: #222;
+  color: #eee;
+  padding: 0 8px;
+}
+#create-node-btn {
+  background: #4ECDC4;
+  color: #222;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#create-node-btn:hover {
+  background: #38b2ac;
+}
+#node-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+#node-list li {
+  padding: 6px 0 6px 4px;
+  border-bottom: 1px solid #333;
+  font-size: 15px;
+  color: #eee;
+  cursor: pointer;
+}
+#node-list li:last-child {
+  border-bottom: none;
+}
+
+/* 顶部导航栏样式优化 */
+.node-nav {
+  display: flex;
+  background: linear-gradient(90deg,#232526,#FFD166 80%,#232526);
+  padding: 6px 16px;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 20;
+  border-bottom: 2px solid #4ECDC4;
+  box-shadow: 0 2px 8px #0006;
+  font-size: 16px;
+  /* 顶部导航栏美化，渐变背景，吸顶显示 */
+}
+
+.node-nav-item {
+  position: relative;
+  padding: 8px 18px;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  margin-right: 12px;
+  font-weight: bold;
+  background: linear-gradient(90deg,#FFD166 40%,#232526 100%);
+  color: #232526;
+  transition: background 0.3s, color 0.3s;
+  /* 一级分类按钮美化，渐变色区分 */
+}
+
+.node-nav-item:hover {
+  background: linear-gradient(90deg,#232526 0%,#FF6B6B 100%);
+  color: #fff;
+  /* 悬停高亮 */
+}
+
+/* 二级节点列表样式优化 */
+.node-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #232526;
+  min-width: 160px;
+  z-index: 1000;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px #000a;
+  border-top: 2px solid #FFD166;
+  /* 二级节点下拉菜单美化 */
+}
+
+.node-dropdown-item {
+  padding: 8px 18px;
+  color: #FFD166;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 15px;
+  border-bottom: 1px solid #333;
+  background: none;
+  transition: background 0.2s, color 0.2s;
+  /* 二级节点美化，主色突出 */
+}
+
+.node-dropdown-item:hover {
+  background: #232526;
+  color: #FF6B6B;
+  /* 悬停高亮，背景深色，文字高亮红色 */
+  /* 悬停高亮 */
+}
+
+/* 显示下拉菜单 */
+.node-nav-item:hover .node-dropdown {
+  display: block;
+  /* 悬停显示下拉菜单 */
+}
