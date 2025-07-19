@@ -1,6 +1,228 @@
 import { setupPixiNodeLogger, LogLevels, LogLevelNames } from './pixiNodeLogger';
 import { generateGameProject } from './export/GameProjectGenerator';
 import { downloadGameProject, showSuccessMessage } from './utils/downloadUtils';
+import { ThreePanelUI } from './ui/ThreePanelUI';
+
+// 创建可折叠分组的辅助函数
+function createCollapsibleSection(title: string, listElement: HTMLUListElement) {
+  const section = document.createElement('div');
+  section.className = 'collapsible-section';
+  section.style.marginBottom = '10px';
+
+  const header = document.createElement('div');
+  header.className = 'collapsible-header';
+  header.textContent = title + ' >';
+  header.style.cursor = 'pointer';
+  header.style.padding = '8px 12px';
+  header.style.backgroundColor = '#2a2a2a';
+  header.style.borderRadius = '4px';
+  header.style.fontWeight = 'bold';
+  header.style.color = '#4ECDC4';
+  header.style.border = '1px solid #444';
+  header.style.transition = 'all 0.2s ease';
+  header.style.userSelect = 'none';
+
+  // 默认收缩
+  listElement.style.display = 'none';
+  listElement.style.marginLeft = '15px';
+  listElement.style.marginTop = '5px';
+  listElement.style.borderLeft = '2px solid #444';
+  listElement.style.paddingLeft = '10px';
+
+  header.onmouseenter = () => {
+    header.style.backgroundColor = '#333';
+    header.style.borderColor = '#4ECDC4';
+  };
+
+  header.onmouseleave = () => {
+    header.style.backgroundColor = '#2a2a2a';
+    header.style.borderColor = '#444';
+  };
+
+  header.onclick = () => {
+    const isCollapsed = listElement.style.display === 'none';
+    listElement.style.display = isCollapsed ? 'block' : 'none';
+    header.textContent = title + (isCollapsed ? ' v' : ' >');
+    
+    // 添加展开/收缩动画效果
+    if (isCollapsed) {
+      header.style.backgroundColor = '#333';
+      header.style.borderColor = '#4ECDC4';
+    } else {
+      header.style.backgroundColor = '#2a2a2a';
+      header.style.borderColor = '#444';
+    }
+  };
+
+  section.appendChild(header);
+  section.appendChild(listElement);
+  return section;
+}
+
+function populateNodeSidebar(canvasElement: HTMLCanvasElement, canvas: any, graph: any) {
+  const nodeListElement = document.getElementById('node-list');
+  if (!nodeListElement) return;
+  nodeListElement.innerHTML = '';
+
+  // Main categories
+  const liteList = document.createElement('ul');
+  liteList.style.display = 'none'; // 默认隐藏
+  const gameList = document.createElement('ul');
+  gameList.style.display = 'none'; // 默认隐藏
+
+  // Create sub-categories for gamePixi
+  const renderShapesList = document.createElement('ul');
+  const renderUiList = document.createElement('ul');
+  const containersList = document.createElement('ul');
+  const resourcesList = document.createElement('ul');
+  const scenesList = document.createElement('ul');
+  const eventsList = document.createElement('ul');
+  const toolsList = document.createElement('ul');
+
+  // Add class names for styling
+  renderShapesList.className = 'node-category render-node';
+  renderUiList.className = 'node-category render-node';
+  containersList.className = 'node-category container-node';
+  resourcesList.className = 'node-category resource-node';
+  scenesList.className = 'node-category scene-node';
+  eventsList.className = 'node-category event-node';
+  toolsList.className = 'node-category tool-node';
+
+  // Create category titles with better styling
+  const renderShapesTitle = document.createElement('li');
+  renderShapesTitle.textContent = 'Shape Rendering';
+  renderShapesTitle.className = 'category-title';
+  renderShapesTitle.style.fontWeight = 'bold';
+  renderShapesTitle.style.color = '#B36B09';
+  gameList.appendChild(renderShapesTitle);
+  gameList.appendChild(renderShapesList);
+
+  const renderUiTitle = document.createElement('li');
+  renderUiTitle.textContent = 'UI Rendering';
+  renderUiTitle.className = 'category-title';
+  renderUiTitle.style.fontWeight = 'bold';
+  renderUiTitle.style.color = '#B36B09';
+  gameList.appendChild(renderUiTitle);
+  gameList.appendChild(renderUiList);
+
+  const containersTitle = document.createElement('li');
+  containersTitle.textContent = 'Containers';
+  containersTitle.className = 'category-title';
+  containersTitle.style.fontWeight = 'bold';
+  containersTitle.style.color = '#23527C';
+  gameList.appendChild(containersTitle);
+  gameList.appendChild(containersList);
+
+  const resourcesTitle = document.createElement('li');
+  resourcesTitle.textContent = 'Resources';
+  resourcesTitle.className = 'category-title';
+  resourcesTitle.style.fontWeight = 'bold';
+  resourcesTitle.style.color = '#357A38';
+  gameList.appendChild(resourcesTitle);
+  gameList.appendChild(resourcesList);
+
+  const scenesTitle = document.createElement('li');
+  scenesTitle.textContent = 'Scenes';
+  scenesTitle.className = 'category-title';
+  scenesTitle.style.fontWeight = 'bold';
+  scenesTitle.style.color = '#23527C';
+  gameList.appendChild(scenesTitle);
+  gameList.appendChild(scenesList);
+
+  const eventsTitle = document.createElement('li');
+  eventsTitle.textContent = 'Events';
+  eventsTitle.className = 'category-title';
+  eventsTitle.style.fontWeight = 'bold';
+  eventsTitle.style.color = '#4B266A';
+  gameList.appendChild(eventsTitle);
+  gameList.appendChild(eventsList);
+
+  const toolsTitle = document.createElement('li');
+  toolsTitle.textContent = 'Tools';
+  toolsTitle.className = 'category-title';
+  toolsTitle.style.fontWeight = 'bold';
+  toolsTitle.style.color = '#7C2323';
+  gameList.appendChild(toolsTitle);
+  gameList.appendChild(toolsList);
+
+  // 收集所有注册的节点类型
+  const registeredNodes = Object.keys(LiteGraph.registered_node_types);
+  console.log('注册的节点类型:', registeredNodes);
+
+  for (const nodeTypePath of registeredNodes) {
+    const nodeConstructor = LiteGraph.registered_node_types[nodeTypePath];
+    const li = document.createElement('li');
+    
+    // Get node title or path
+    const parts = nodeTypePath.split('/');
+    const shortName = parts[parts.length - 1];
+    const title = nodeConstructor.prototype && nodeConstructor.prototype.title 
+      ? nodeConstructor.prototype.title 
+      : shortName;
+    
+    li.textContent = title;
+    li.title = nodeTypePath;
+    li.style.cursor = 'pointer';
+    li.style.padding = '4px 8px';
+    li.style.margin = '2px 0';
+    li.style.borderRadius = '3px';
+    li.style.transition = 'background-color 0.2s';
+    
+    li.onmouseenter = () => {
+      li.style.backgroundColor = '#333';
+    };
+    
+    li.onmouseleave = () => {
+      li.style.backgroundColor = 'transparent';
+    };
+    
+    li.onclick = () => {
+      const node = LiteGraph.createNode(nodeTypePath);
+      if (node) {
+        const rect = canvasElement.getBoundingClientRect();
+        const center = canvas.convertOffsetToCanvas([rect.width / 2, rect.height / 2]);
+        node.pos = [center[0] - (node.size?.[0] || 100) / 2, center[1] - (node.size?.[1] || 40) / 2];
+        graph.add(node);
+      }
+    };
+    
+    // 改进的节点分类逻辑
+    if (nodeTypePath.startsWith('render/')) {
+      // 形状渲染节点
+      if (['render/rect', 'render/circle', 'render/line', 'render/triangle'].includes(nodeTypePath)) {
+        renderShapesList.appendChild(li);
+      } else {
+        // UI渲染节点
+        renderUiList.appendChild(li);
+      }
+    } else if (nodeTypePath.startsWith('pixi/containers/') || nodeTypePath === 'containers/DisplayCollector') {
+      containersList.appendChild(li);
+    } else if (nodeTypePath.startsWith('resource/')) {
+      resourcesList.appendChild(li);
+    } else if (nodeTypePath.startsWith('scene/') || nodeTypePath.startsWith('pixi/scene/')) {
+      scenesList.appendChild(li);
+    } else if (nodeTypePath.startsWith('event/')) {
+      eventsList.appendChild(li);
+    } else if (nodeTypePath.startsWith('tools/')) {
+      toolsList.appendChild(li);
+    } else {
+      // 其他节点归入Basic分类
+      liteList.appendChild(li);
+    }
+  }
+
+  // 检查每个分类是否有节点，如果没有则隐藏
+  if (liteList.children.length === 0) {
+    liteList.style.display = 'none';
+  }
+  if (gameList.children.length === 0) {
+    gameList.style.display = 'none';
+  }
+
+  // Create collapsible sections
+  nodeListElement.appendChild(createCollapsibleSection('Basic', liteList));
+  nodeListElement.appendChild(createCollapsibleSection('GamePixi', gameList));
+}
 
 // 案例管理相关函数
 async function loadAvailableExamples() {
@@ -530,201 +752,37 @@ import './style.css';
 
 // 注册自定义节点
 import { registerCustomNodes } from './nodes';
-registerCustomNodes();
 
 
-// 2. 创建 LiteGraph 编辑器
-const graph = new LGraph();
-const canvasElement = document.getElementById('graphCanvas') as HTMLCanvasElement;
-const canvas = new LGraphCanvas(canvasElement, graph);
+document.addEventListener('DOMContentLoaded', () => {
+  // 注册自定义节点
+  registerCustomNodes();
 
-// 创建全局顶栏按钮组（此时 graph 已初始化）
-createTopbarButtonGroup(graph, LiteGraph);
+  // 创建 LiteGraph 编辑器
+  const graph = new LGraph();
+  const canvasElement = document.getElementById('graphCanvas') as HTMLCanvasElement;
+  const canvas = new LGraphCanvas(canvasElement, graph);
 
+  // 创建全局顶栏按钮组（此时 graph 已初始化）
+  createTopbarButtonGroup(graph, LiteGraph);
 
-// 3. 侧边栏节点列表填充与点击添加
+  // 初始化三面板UI（负责所有UI事件和侧边栏）
+  const threePanelUI = new ThreePanelUI(graph);
 
-// 创建可折叠分组的辅助函数
-function createCollapsibleSection(title: string, listElement: HTMLUListElement) {
-  const section = document.createElement('div');
-  section.className = 'collapsible-section';
-
-  const header = document.createElement('div');
-  header.className = 'collapsible-header';
-  header.textContent = title + ' >';
-  header.style.cursor = 'pointer';
-
-  // 默认收缩
-  listElement.style.display = 'none';
-
-  header.onclick = () => {
-    const isCollapsed = listElement.style.display === 'none';
-    listElement.style.display = isCollapsed ? 'block' : 'none';
-    header.textContent = title + (isCollapsed ? ' v' : ' >');
-  };
-
-  section.appendChild(header);
-  section.appendChild(listElement);
-  return section;
-}
-
-function populateNodeSidebar() {
-  const nodeListElement = document.getElementById('node-list');
-  if (!nodeListElement) return;
-  nodeListElement.innerHTML = '';
-
-  // Main categories
-  const liteList = document.createElement('ul');
-  liteList.style.display = 'block';
-  const gameList = document.createElement('ul');
-  gameList.style.display = 'block';
-
-  // Create sub-categories for gamePixi
-  const renderShapesList = document.createElement('ul');
-  const renderUiList = document.createElement('ul');
-  const containersList = document.createElement('ul');
-  const resourcesList = document.createElement('ul');
-  const scenesList = document.createElement('ul');
-  const eventsList = document.createElement('ul');
-  const toolsList = document.createElement('ul');
-  // const othersList = document.createElement('ul');
-
-  // Add class names for styling
-  renderShapesList.className = 'node-category render-node';
-  renderUiList.className = 'node-category render-node';
-  containersList.className = 'node-category container-node';
-  resourcesList.className = 'node-category resource-node';
-  scenesList.className = 'node-category scene-node';
-  eventsList.className = 'node-category event-node';
-  toolsList.className = 'node-category tool-node';
-  // othersList.className = 'node-category';
-
-  // Create category titles
-  const renderShapesTitle = document.createElement('li');
-  renderShapesTitle.textContent = 'Shape Rendering';
-  renderShapesTitle.className = 'category-title';
-  gameList.appendChild(renderShapesTitle);
-  gameList.appendChild(renderShapesList);
-
-  const renderUiTitle = document.createElement('li');
-  renderUiTitle.textContent = 'UI Rendering';
-  renderUiTitle.className = 'category-title';
-  gameList.appendChild(renderUiTitle);
-  gameList.appendChild(renderUiList);
-
-  const containersTitle = document.createElement('li');
-  containersTitle.textContent = 'Containers';
-  containersTitle.className = 'category-title';
-  gameList.appendChild(containersTitle);
-  gameList.appendChild(containersList);
-
-  const resourcesTitle = document.createElement('li');
-  resourcesTitle.textContent = 'Resources';
-  resourcesTitle.className = 'category-title';
-  gameList.appendChild(resourcesTitle);
-  gameList.appendChild(resourcesList);
-
-  const scenesTitle = document.createElement('li');
-  scenesTitle.textContent = 'Scenes';
-  scenesTitle.className = 'category-title';
-  gameList.appendChild(scenesTitle);
-  gameList.appendChild(scenesList);
-
-  const eventsTitle = document.createElement('li');
-  eventsTitle.textContent = 'Events';
-  eventsTitle.className = 'category-title';
-  gameList.appendChild(eventsTitle);
-  gameList.appendChild(eventsList);
-
-  const toolsTitle = document.createElement('li');
-  toolsTitle.textContent = 'Tools';
-  toolsTitle.className = 'category-title';
-  gameList.appendChild(toolsTitle);
-  gameList.appendChild(toolsList);
-
-  // const othersTitle = document.createElement('li');
-  // othersTitle.textContent = 'Others';
-  // othersTitle.className = 'category-title';
-  // gameList.appendChild(othersTitle);
-  // gameList.appendChild(othersList);
-
-  for (const nodeTypePath in LiteGraph.registered_node_types) {
-    if (LiteGraph.registered_node_types.hasOwnProperty(nodeTypePath)) {
-      const nodeConstructor = LiteGraph.registered_node_types[nodeTypePath];
-      const li = document.createElement('li');
-      
-      // Get node title or path
-      const parts = nodeTypePath.split('/');
-      const shortName = parts[parts.length - 1];
-      const title = nodeConstructor.prototype && nodeConstructor.prototype.title 
-        ? nodeConstructor.prototype.title 
-        : shortName;
-      
-      li.textContent = title;
-      li.title = nodeTypePath;
-      
-      li.onclick = () => {
-        const node = LiteGraph.createNode(nodeTypePath);
-        if (node) {
-          const rect = canvasElement.getBoundingClientRect();
-          const center = canvas.convertOffsetToCanvas([rect.width / 2, rect.height / 2]);
-          node.pos = [center[0] - (node.size?.[0] || 100) / 2, center[1] - (node.size?.[1] || 40) / 2];
-          graph.add(node);
-        }
-      };
-      
-      // Sort nodes into categories
-      if (nodeTypePath.startsWith('render/')) {
-        // Shape rendering nodes vs UI rendering nodes
-        if (nodeTypePath === 'render/rect' || 
-            nodeTypePath === 'render/circle' || 
-            nodeTypePath === 'render/line' || 
-            nodeTypePath === 'render/triangle') {
-          renderShapesList.appendChild(li);
-        } else {
-          renderUiList.appendChild(li);
-        }
-      } else if (nodeTypePath.startsWith('pixi/containers/')) {
-        containersList.appendChild(li);
-      } else if (nodeTypePath.startsWith('resource/') || nodeTypePath.includes('Resource')) {
-        resourcesList.appendChild(li);
-      } else if (nodeTypePath.startsWith('scene/')) {
-        scenesList.appendChild(li);
-      } else if (nodeTypePath.startsWith('event/')) {
-        eventsList.appendChild(li);
-      } else if (nodeTypePath.startsWith('tools/')) {
-        toolsList.appendChild(li);
-      } else if ((nodeTypePath.startsWith('pixi/') || 
-                 nodeTypePath.startsWith('basic/') || 
-                 nodeTypePath === 'basic') && 
-                 nodeTypePath.indexOf('/') !== -1) {
-        // Only put actual Pixi nodes in Others category
-        // othersList.appendChild(li);
-      } else {
-        // Default LiteGraph nodes belong in the Basic category
-        liteList.appendChild(li);
-      }
+  // 页面加载时自动恢复节点数据
+  const savedGraph = localStorage.getItem('game-editor-graph');
+  if (savedGraph) {
+    try {
+      graph.configure(JSON.parse(savedGraph));
+    } catch (e) {
+      console.warn('恢复节点数据失败:', e);
     }
   }
 
-  // Create collapsible sections
-  nodeListElement.appendChild(createCollapsibleSection('Basic', liteList));
-  nodeListElement.appendChild(createCollapsibleSection('GamePixi', gameList));
-}
-populateNodeSidebar();
+  // 默认不自动运行，需点击运行按钮
+  window.addEventListener('resize', () => canvas.resize());
+  canvas.resize();
 
-
-
-// 页面加载时自动恢复节点数据
-const savedGraph = localStorage.getItem('game-editor-graph');
-if (savedGraph) {
-  try {
-    graph.configure(JSON.parse(savedGraph));
-  } catch (e) {
-    console.warn('恢复节点数据失败:', e);
-  }
-}
-
-// 默认不自动运行，需点击运行按钮
-window.addEventListener('resize', () => canvas.resize());
-canvas.resize();
+  // 填充节点侧边栏
+  populateNodeSidebar(canvasElement, canvas, graph);
+});

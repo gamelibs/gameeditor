@@ -83,6 +83,7 @@ export const NODE_TYPE_MAPPING: NodeType[] = [
   { path: 'render/image', category: 'render-ui', title: '图像' },
   { path: 'render/button', category: 'render-ui', title: '按钮' },
   { path: 'render/text', category: 'render-ui', title: '文本' },
+  { path: 'render/clickCounter', category: 'render-ui', title: '点击计数器' },
   
   // 容器节点
   { path: 'pixi/containers/RootContainer', category: 'containers', title: '根容器' },

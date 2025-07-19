@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <title>Game Editor</title>
@@ -7,7 +7,6 @@
 </head>
 <body>
   <div id="topbar"></div>
-  
   <!-- 顶部切入按钮区域 -->
   <div id="top-panel-controls" class="top-panel-controls" style="display: none;">
     <div class="panel-controls-container">
@@ -16,7 +15,6 @@
       <button id="restoreAllPanelsBtn" class="restore-btn">🔄 恢复所有面板</button>
     </div>
   </div>
-  
   <div id="app-container">
     <!-- 浮动节点导航面板 -->
     <div id="floating-sidebar" class="floating-sidebar">
@@ -30,7 +28,6 @@
         </div>
       </div>
     </div>
-
     <!-- 主要内容区域 -->
     <div id="main-content">
       <!-- 节点编辑器区域 (左侧, 50%) -->
@@ -44,12 +41,10 @@
             <button id="resetGameBtn" class="panel-btn">🔄 重置</button>
           </div>
         </div>
-        <canvas id="graphCanvas"></canvas>
+        <canvas id="graphCanvas" tabindex="-1"></canvas>
       </div>
-
       <!-- 垂直分割条1 -->
       <div class="vertical-splitter" id="splitter1"></div>
-
       <!-- 游戏预览区域 -->
       <div id="game-preview-panel" class="editor-panel">
         <div class="panel-header">
@@ -61,24 +56,16 @@
           </div>
         </div>
         <div class="game-preview-content">
-          <!-- 游戏信息显示 -->
           <div class="game-info">
             <div class="design-size">设计尺寸: 750 × 1334</div>
-            <div class="scale-info">缩放比例: <span id="scaleRatio">1.0</span></div>
+            <div class="scale-info">缩放比例: <span id="scaleRatio">100%</span></div>
+            <div class="device-info">适配设备: iPhone 6/7/8 Plus</div>
           </div>
-          <!-- iframe游戏预览 -->
           <iframe id="gamePreviewFrame" src="/build/index.html" frameborder="0"></iframe>
-          <!-- 加载指示器 -->
-          <div id="gameLoadingIndicator" class="loading-indicator">
-            <div class="loading-spinner"></div>
-            <span>加载游戏中...</span>
-          </div>
         </div>
       </div>
-
       <!-- 垂直分割条2 -->
       <div class="vertical-splitter" id="splitter2"></div>
-
       <!-- 代码预览区域 -->
       <div id="code-preview-panel" class="editor-panel">
         <div class="panel-header">
@@ -97,19 +84,15 @@
             <div class="code-tab" data-tab="debug-console">🐛 调试控制台</div>
           </div>
           <div class="code-tab-content">
-            <!-- 游戏逻辑标签页 -->
             <div id="game-logic-tab" class="tab-pane active">
               <pre id="gameLogicDisplay" class="code-display"><code>// 等待节点图变化...</code></pre>
             </div>
-            <!-- 运行时引擎标签页 -->
             <div id="runtime-tab" class="tab-pane">
               <pre id="runtimeDisplay" class="code-display"><code>// 游戏运行时引擎</code></pre>
             </div>
-            <!-- index.html标签页 -->
             <div id="index-html-tab" class="tab-pane">
               <pre id="indexHtmlDisplay" class="code-display"><code><!-- 游戏入口HTML --></code></pre>
             </div>
-            <!-- 调试控制台标签页 -->
             <div id="debug-console-tab" class="tab-pane">
               <div class="debug-console-container">
                 <div class="debug-info">

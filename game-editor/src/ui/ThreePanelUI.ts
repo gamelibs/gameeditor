@@ -53,6 +53,11 @@ export class ThreePanelUI {
     
     // 在游戏预览区域添加信息显示
     this.addGameInfoDisplay();
+    
+    // 初始化缩放信息
+    setTimeout(() => {
+      this.updateScaleInfo();
+    }, 100);
   }
 
   private addGameInfoDisplay() {
@@ -84,6 +89,7 @@ export class ThreePanelUI {
     // 窗口大小变化
     window.addEventListener('resize', () => {
       this.resizeGameCanvas();
+      this.updateScaleInfo(); // 更新缩放信息
     });
     
     // 图形变化监听 - 使用正确的事件方法
@@ -225,20 +231,15 @@ export class ThreePanelUI {
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         const targetTab = tab.getAttribute('data-tab');
-        
         // 移除所有活动状态
         tabs.forEach(t => t.classList.remove('active'));
         tabPanes.forEach(pane => pane.classList.remove('active'));
-        
         // 激活当前标签
         tab.classList.add('active');
-        
         // 激活对应的标签页内容
         const targetElement = document.getElementById(`${targetTab}-tab`);
-        
         if (targetElement) {
           targetElement.classList.add('active');
-          
           // 根据标签类型更新对应的代码显示
           if (targetTab) {
             this.updateCodeDisplay(targetTab);
@@ -481,21 +482,22 @@ export class ThreePanelUI {
   private updateGamePreview() {
     // 更新iframe预览
     const iframe = document.getElementById('gamePreviewFrame') as HTMLIFrameElement;
-    const loadingIndicator = document.getElementById('gameLoadingIndicator');
     
-    if (iframe && loadingIndicator) {
-      // 显示加载状态
-      loadingIndicator.style.display = 'flex';
-      iframe.style.opacity = '0.3';
-      
+    if (iframe) {
       // 刷新iframe
       iframe.src = iframe.src;
       
       // 监听iframe加载完成
       iframe.onload = () => {
-        loadingIndicator.style.display = 'none';
-        iframe.style.opacity = '1';
         this.updateScaleInfo();
+        
+        // 监听来自iframe的消息
+        window.addEventListener('message', (event) => {
+          if (event.data?.type === 'game-loaded') {
+            console.log('🎮 游戏加载完成');
+            this.updateScaleInfo();
+          }
+        });
       };
     }
   }
@@ -708,14 +710,47 @@ export class ThreePanelUI {
         const containerRect = container.getBoundingClientRect();
         const designWidth = 750;
         const designHeight = 1334;
-        const currentWidth = 375; // iframe当前宽度
-        const currentHeight = 667; // iframe当前高度
         
-        const scaleX = currentWidth / designWidth;
-        const scaleY = currentHeight / designHeight;
-        const scale = Math.min(scaleX, scaleY);
+        // 计算容器的可用空间（减去游戏信息显示区域的高度和边距）
+        const gameInfoHeight = 80; // 游戏信息显示区域的高度
+        const margin = 20; // 边距
+        const availableWidth = containerRect.width - margin * 2;
+        const availableHeight = containerRect.height - gameInfoHeight - margin * 2;
         
-        scaleRatioElement.textContent = scale.toFixed(2);
+        // 计算缩放比例
+        const scaleX = availableWidth / designWidth;
+        const scaleY = availableHeight / designHeight;
+        const scale = Math.min(scaleX, scaleY, 1); // 不超过1:1，避免放大
+        
+        // 更新缩放信息显示
+        const scalePercent = Math.round(scale * 100);
+        scaleRatioElement.textContent = `${scalePercent}%`;
+        
+        // 计算实际显示尺寸
+        const actualWidth = Math.floor(designWidth * scale);
+        const actualHeight = Math.floor(designHeight * scale);
+        
+        // 更新iframe的样式
+        iframe.style.width = `${actualWidth}px`;
+        iframe.style.height = `${actualHeight}px`;
+        iframe.style.maxWidth = `${actualWidth}px`;
+        iframe.style.maxHeight = `${actualHeight}px`;
+        
+        // 更新设备信息
+        const deviceInfoElement = document.querySelector('.device-info');
+        if (deviceInfoElement) {
+          if (scale >= 0.8) {
+            deviceInfoElement.textContent = '适配设备: iPhone 6/7/8 Plus';
+          } else if (scale >= 0.6) {
+            deviceInfoElement.textContent = '适配设备: iPhone 6/7/8';
+          } else if (scale >= 0.5) {
+            deviceInfoElement.textContent = '适配设备: iPhone SE';
+          } else {
+            deviceInfoElement.textContent = '适配设备: 小屏设备';
+          }
+        }
+        
+        console.log(`📏 缩放信息更新: 容器 ${availableWidth}x${availableHeight}, 设计 ${designWidth}x${designHeight}, 缩放 ${scalePercent}%, 实际 ${actualWidth}x${actualHeight}`);
       }
     }
   }
