@@ -4,68 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>基于节点的H5游戏</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: Arial, sans-serif;
-        }
-        
-        #gameContainer {
-            position: relative;
-            max-width: 100vw;
-            max-height: 100vh;
-            background: #1a1a1a;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-        
-        #loadingScreen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #1a1a1a;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #fff;
-            z-index: 1000;
-        }
-        
-        .loading-spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #333;
-            border-top: 4px solid #4ECDC4;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="gameContainer">
+    <div id="game-container">
         <!-- 加载屏幕 -->
-        <div id="loadingScreen">
+        <div id="loadingScreen" class="loading">
             <div class="loading-spinner"></div>
+            <div class="game-text">游戏加载中...</div>
         </div>
         
         <!-- 游戏canvas将在这里动态添加 -->
+        <div id="game-canvas-container"></div>
+        
+        <!-- UI层 -->
+        <div class="ui-layer">
+            <div class="game-status">准备中</div>
+            <div class="score-display">分数: 0</div>
+        </div>
     </div>
+    
+    <!-- 游戏配置文件 -->
+    <script src="config.js"></script>
     
     <!-- PIXI.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.0.0/dist/pixi.min.js"></script>

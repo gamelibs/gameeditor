@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时代码预览 - Game Editor</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2a2a2a;
+            border-bottom: 1px solid #444;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            color: #4ECDC4;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            background: #4ECDC4;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+        
+        .btn:hover {
+            background: #44A08D;
+        }
+        
+        .content {
+            display: flex;
+            height: calc(100vh - 60px);
+        }
+        
+        .code-tabs {
+            background: #2a2a2a;
+            border-right: 1px solid #444;
+            width: 200px;
+            overflow-y: auto;
+        }
+        
+        .code-tab {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #444;
+            transition: background 0.2s ease;
+            font-size: 13px;
+        }
+        
+        .code-tab:hover {
+            background: #333;
+        }
+        
+        .code-tab.active {
+            background: #4ECDC4;
+            color: white;
+        }
+        
+        .code-content {
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .tab-pane {
+            display: none;
+            height: 100%;
+        }
+        
+        .tab-pane.active {
+            display: block;
+        }
+        
+        .code-display {
+            background: #1a1a1a;
+            color: #e6e6e6;
+            padding: 20px;
+            height: 100%;
+            overflow: auto;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .code-display .keyword {
+            color: #ff6b6b;
+        }
+        
+        .code-display .string {
+            color: #4ECDC4;
+        }
+        
+        .code-display .number {
+            color: #feca57;
+        }
+        
+        .code-display .comment {
+            color: #666;
+        }
+        
+        .code-display .function {
+            color: #48dbfb;
+        }
+        
+        .code-display .class {
+            color: #ff9ff3;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #666;
+        }
+        
+        .error {
+            color: #ff6b6b;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📄 实时代码预览</h1>
+        <div class="header-controls">
+            <button class="btn" onclick="refreshCode()">🔄 刷新</button>
+            <button class="btn" onclick="copyCode()">📋 复制</button>
+            <button class="btn" onclick="downloadCode()">💾 下载</button>
+        </div>
+    </div>
+    
+    <div class="content">
+        <div class="code-tabs">
+            <div class="code-tab active" data-tab="game-logic">🎮 游戏逻辑</div>
+            <div class="code-tab" data-tab="runtime">⚡ 运行时引擎</div>
+            <div class="code-tab" data-tab="index-html">📄 index.html</div>
+            <div class="code-tab" data-tab="config">⚙️ 配置文件</div>
+        </div>
+        
+        <div class="code-content">
+            <!-- 游戏逻辑标签页 -->
+            <div id="game-logic-tab" class="tab-pane active">
+                <div id="gameLogicDisplay" class="code-display">
+                    <div class="loading">正在加载游戏逻辑代码...</div>
+                </div>
+            </div>
+            
+            <!-- 运行时引擎标签页 -->
+            <div id="runtime-tab" class="tab-pane">
+                <div id="runtimeDisplay" class="code-display">
+                    <div class="loading">正在加载运行时引擎代码...</div>
+                </div>
+            </div>
+            
+            <!-- index.html标签页 -->
+            <div id="index-html-tab" class="tab-pane">
+                <div id="indexHtmlDisplay" class="code-display">
+                    <div class="loading">正在加载HTML代码...</div>
+                </div>
+            </div>
+            
+            <!-- 配置文件标签页 -->
+            <div id="config-tab" class="tab-pane">
+                <div id="configDisplay" class="code-display">
+                    <div class="loading">正在加载配置文件...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 代码生成器模拟
+        class CodeGenerator {
+            generateGameLogic() {
+                return `// 游戏逻辑代码
+// 由节点编辑器自动生成
+
+class GameLogic {
+    constructor() {
+        this.score = 0;
+        this.lives = 3;
+        this.isRunning = false;
+    }
+    
+    start() {
+        this.isRunning = true;
+        console.log('游戏开始');
+    }
+    
+    update(deltaTime) {
+        if (!this.isRunning) return;
+        
+        // 游戏逻辑更新
+        this.updatePlayer();
+        this.updateEnemies();
+        this.checkCollisions();
+    }
+    
+    updatePlayer() {
+        // 玩家更新逻辑
+    }
+    
+    updateEnemies() {
+        // 敌人更新逻辑
+    }
+    
+    checkCollisions() {
+        // 碰撞检测
+    }
+    
+    addScore(points) {
+        this.score += points;
+    }
+    
+    loseLife() {
+        this.lives--;
+        if (this.lives <= 0) {
+            this.gameOver();
+        }
+    }
+    
+    gameOver() {
+        this.isRunning = false;
+        console.log('游戏结束');
+    }
+}
+
+// 导出游戏逻辑
+window.GameLogic = GameLogic;`;
+            }
+            
+            generateRuntimeEngine() {
+                return `// 运行时引擎
+// 负责游戏的核心运行
+
+class GameRuntime {
+    constructor() {
+        this.app = null;
+        this.gameLogic = null;
+        this.lastTime = 0;
+        this.isRunning = false;
+    }
+    
+    async init(width, height) {
+        // 初始化PIXI应用
+        this.app = new PIXI.Application({
+            width: width,
+            height: height,
+            backgroundColor: 0x000000,
+            antialias: true
+        });
+        
+        // 初始化游戏逻辑
+        this.gameLogic = new GameLogic();
+        
+        // 开始游戏循环
+        this.startGameLoop();
+    }
+    
+    startGameLoop() {
+        this.isRunning = true;
+        this.gameLoop();
+    }
+    
+    gameLoop(currentTime = 0) {
+        if (!this.isRunning) return;
+        
+        const deltaTime = currentTime - this.lastTime;
+        this.lastTime = currentTime;
+        
+        // 更新游戏逻辑
+        if (this.gameLogic) {
+            this.gameLogic.update(deltaTime);
+        }
+        
+        // 继续游戏循环
+        requestAnimationFrame((time) => this.gameLoop(time));
+    }
+    
+    stop() {
+        this.isRunning = false;
+    }
+    
+    getApp() {
+        return this.app;
+    }
+}
+
+// 导出运行时引擎
+window.GameRuntime = GameRuntime;`;
+            }
+            
+            async loadIndexHtml() {
+                try {
+                    const response = await fetch('/build/index.html');
+                    return await response.text();
+                } catch (error) {
+                    return '// 无法加载 index.html 文件\n' + error.message;
+                }
+            }
+            
+            generateConfig() {
+                return `// 游戏配置文件
+// 统一管理游戏设置
+
+window.GameConfig = {
+    // 游戏基本信息
+    gameInfo: {
+        name: 'Game Editor Demo',
+        version: '1.0.0',
+        author: 'Game Editor Team'
+    },
+    
+    // 显示配置
+    display: {
+        designWidth: 750,
+        designHeight: 1334,
+        backgroundColor: '#000000'
+    },
+    
+    // 性能配置
+    performance: {
+        targetFPS: 60,
+        enableVSync: true
+    },
+    
+    // 音频配置
+    audio: {
+        masterVolume: 0.7,
+        musicVolume: 0.5,
+        sfxVolume: 0.8
+    },
+    
+    // 调试配置
+    debug: {
+        showFPS: false,
+        enableConsole: true,
+        logLevel: 'info'
+    }
+};`;
+            }
+        }
+        
+        // 初始化代码生成器
+        const codeGenerator = new CodeGenerator();
+        
+        // 标签页切换
+        document.querySelectorAll('.code-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.getAttribute('data-tab');
+                
+                // 移除所有活动状态
+                document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+                
+                // 激活当前标签
+                tab.classList.add('active');
+                
+                // 激活对应的标签页内容
+                const targetElement = document.getElementById(`${targetTab}-tab`);
+                if (targetElement) {
+                    targetElement.classList.add('active');
+                    updateCodeDisplay(targetTab);
+                }
+            });
+        });
+        
+        // 更新代码显示
+        function updateCodeDisplay(tabType) {
+            let code = '';
+            let elementId = '';
+            
+            switch (tabType) {
+                case 'game-logic':
+                    code = codeGenerator.generateGameLogic();
+                    elementId = 'gameLogicDisplay';
+                    break;
+                case 'runtime':
+                    code = codeGenerator.generateRuntimeEngine();
+                    elementId = 'runtimeDisplay';
+                    break;
+                case 'index-html':
+                    codeGenerator.loadIndexHtml().then(html => {
+                        const element = document.getElementById('indexHtmlDisplay');
+                        if (element) {
+                            element.textContent = html;
+                        }
+                    });
+                    return;
+                case 'config':
+                    code = codeGenerator.generateConfig();
+                    elementId = 'configDisplay';
+                    break;
+                default:
+                    return;
+            }
+            
+            const codeDisplay = document.getElementById(elementId);
+            if (codeDisplay) {
+                codeDisplay.textContent = code;
+            }
+        }
+        
+        // 刷新代码
+        function refreshCode() {
+            const activeTab = document.querySelector('.code-tab.active');
+            if (activeTab) {
+                const targetTab = activeTab.getAttribute('data-tab');
+                updateCodeDisplay(targetTab);
+            }
+        }
+        
+        // 复制代码
+        function copyCode() {
+            const activePane = document.querySelector('.tab-pane.active');
+            const codeDisplay = activePane.querySelector('.code-display');
+            if (codeDisplay) {
+                navigator.clipboard.writeText(codeDisplay.textContent).then(() => {
+                    alert('代码已复制到剪贴板');
+                });
+            }
+        }
+        
+        // 下载代码
+        function downloadCode() {
+            const activePane = document.querySelector('.tab-pane.active');
+            const codeDisplay = activePane.querySelector('.code-display');
+            if (codeDisplay) {
+                const blob = new Blob([codeDisplay.textContent], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'game-code.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+        
+        // 初始化显示
+        updateCodeDisplay('game-logic');
+    </script>
+</body>
+</html> 

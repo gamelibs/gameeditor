@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏预览测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+        
+        .preview-frame {
+            width: 375px;
+            height: 667px;
+            border: 2px solid #4ECDC4;
+            border-radius: 8px;
+            background: #222;
+            margin: 10px 0;
+        }
+        
+        .info-panel {
+            background: rgba(0, 0, 0, 0.8);
+            color: #4ECDC4;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .btn {
+            background: #4ECDC4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: #44A08D;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎮 游戏预览功能测试</h1>
+        
+        <div class="test-section">
+            <h2>📱 移动端预览 (750×1334)</h2>
+            <div class="info-panel">
+                设计尺寸: 750 × 1334<br>
+                预览尺寸: 375 × 667 (缩放比例: 0.5)<br>
+                适配设备: iPhone 6/7/8 Plus
+            </div>
+            <iframe src="/build/index.html" class="preview-frame" frameborder="0"></iframe>
+            <div>
+                <button class="btn" onclick="refreshPreview()">🔄 刷新预览</button>
+                <button class="btn" onclick="openInNewWindow()">🪟 新窗口打开</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🖥️ 桌面端预览 (原始尺寸)</h2>
+            <div class="info-panel">
+                原始尺寸: 750 × 1334<br>
+                无缩放，完整显示
+            </div>
+            <iframe src="/build/index.html" width="750" height="1334" frameborder="0" style="border: 2px solid #4ECDC4; border-radius: 8px;"></iframe>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 文件结构验证</h2>
+            <div class="info-panel">
+                检查build目录中的文件是否正确加载
+            </div>
+            <div id="file-status"></div>
+        </div>
+    </div>
+    
+    <script>
+        // 刷新预览
+        function refreshPreview() {
+            const iframes = document.querySelectorAll('iframe');
+            iframes.forEach(iframe => {
+                iframe.src = iframe.src;
+            });
+            console.log('🔄 预览已刷新');
+        }
+        
+        // 新窗口打开
+        function openInNewWindow() {
+            const newWindow = window.open('/build/index.html', '_blank', 'width=750,height=1334,scrollbars=no,resizable=yes');
+            if (newWindow) {
+                newWindow.focus();
+            } else {
+                alert('无法打开新窗口，请检查浏览器弹窗设置');
+            }
+        }
+        
+        // 检查文件状态
+        async function checkFiles() {
+            const files = [
+                '/build/index.html',
+                '/build/style.css',
+                '/build/config.js',
+                '/build/gamecore.js',
+                '/build/logic.js'
+            ];
+            
+            const statusDiv = document.getElementById('file-status');
+            let statusHtml = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">';
+            
+            for (const file of files) {
+                try {
+                    const response = await fetch(file, { method: 'HEAD' });
+                    const status = response.ok ? '✅' : '❌';
+                    const color = response.ok ? '#4ECDC4' : '#e74c3c';
+                    statusHtml += `<div style="color: ${color};">${status} ${file}</div>`;
+                } catch (error) {
+                    statusHtml += `<div style="color: #e74c3c;">❌ ${file} (网络错误)</div>`;
+                }
+            }
+            
+            statusHtml += '</div>';
+            statusDiv.innerHTML = statusHtml;
+        }
+        
+        // 页面加载完成后检查文件
+        window.addEventListener('DOMContentLoaded', () => {
+            checkFiles();
+            
+            // 监听iframe加载完成
+            const iframes = document.querySelectorAll('iframe');
+            iframes.forEach(iframe => {
+                iframe.addEventListener('load', () => {
+                    console.log('✅ iframe加载完成:', iframe.src);
+                });
+                
+                iframe.addEventListener('error', () => {
+                    console.error('❌ iframe加载失败:', iframe.src);
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

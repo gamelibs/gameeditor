@@ -3,52 +3,151 @@
  * 包含节点颜色、类型分类、端口类型等配置信息
  */
 
-// ================= 节点分类说明 =================
+// 节点分类配置
+export interface NodeCategory {
+  id: string;
+  title: string;
+  className: string;
+  description?: string;
+}
 
-/**
- * 1. 场景类节点（Scene）
- * - 代表游戏的逻辑空间、舞台或层级结构
- * - 端口类型: scene, layer, container
- * - 典型节点: 主场景节点、子场景/层节点、场景切换节点等
- * - 作用: 组织和管理所有显示对象、精灵、UI等
- * - 默认颜色: 深蓝色 #23527C
- */
+export interface NodeType {
+  path: string;
+  category: string;
+  title?: string;
+  description?: string;
+  tags?: string[];
+}
 
-/**
- * 2. 资源类节点（Resource）
- * - 代表图片、音频、动画、字体、数据等外部或内存资源
- * - 端口类型: texture, audio, json, atlas, font
- * - 典型节点: 图片加载、音频加载、资源管理、预加载等
- * - 作用: 为渲染和逻辑节点提供素材和数据
- * - 默认颜色: 深绿色 #357A38
- */
+// 节点分类定义
+export const NODE_CATEGORIES: NodeCategory[] = [
+  {
+    id: 'basic',
+    title: '基础节点',
+    className: 'basic-node',
+    description: 'LiteGraph 基础功能节点'
+  },
+  {
+    id: 'render-shapes',
+    title: '形状渲染',
+    className: 'render-node',
+    description: '基础几何图形渲染'
+  },
+  {
+    id: 'render-ui',
+    title: 'UI渲染',
+    className: 'render-node',
+    description: '用户界面元素渲染'
+  },
+  {
+    id: 'containers',
+    title: '容器',
+    className: 'container-node',
+    description: '容器和层级管理'
+  },
+  {
+    id: 'resources',
+    title: '资源',
+    className: 'resource-node',
+    description: '资源加载和管理'
+  },
+  {
+    id: 'scenes',
+    title: '场景',
+    className: 'scene-node',
+    description: '场景和舞台管理'
+  },
+  {
+    id: 'events',
+    title: '事件',
+    className: 'event-node',
+    description: '事件处理和交互'
+  },
+  {
+    id: 'tools',
+    title: '工具',
+    className: 'tool-node',
+    description: '辅助工具节点'
+  }
+];
 
-/**
- * 3. 渲染类节点（Render）
- * - 代表所有可见的 Pixi 对象（如 Sprite、Graphics、Text、Container）
- * - 端口类型: pixi_sprite, pixi_graphics, pixi_text, pixi_container, display_object
- * - 典型节点: Sprite、Rectangle、Circle、Text、Container、滤镜、遮罩等
- * - 作用: 负责实际的画面输出和视觉表现
- * - 默认颜色: 深橙色 #B36B09
- */
+// 节点类型映射
+export const NODE_TYPE_MAPPING: NodeType[] = [
+  // 形状渲染节点
+  { path: 'render/rect', category: 'render-shapes', title: '矩形' },
+  { path: 'render/circle', category: 'render-shapes', title: '圆形' },
+  { path: 'render/line', category: 'render-shapes', title: '线条' },
+  { path: 'render/triangle', category: 'render-shapes', title: '三角形' },
+  
+  // UI渲染节点
+  { path: 'render/image', category: 'render-ui', title: '图像' },
+  { path: 'render/button', category: 'render-ui', title: '按钮' },
+  { path: 'render/text', category: 'render-ui', title: '文本' },
+  
+  // 容器节点
+  { path: 'pixi/containers/RootContainer', category: 'containers', title: '根容器' },
+  { path: 'pixi/containers/UILayer', category: 'containers', title: 'UI层' },
+  { path: 'pixi/containers/GameLayer', category: 'containers', title: '游戏层' },
+  { path: 'pixi/containers/SystemLayer', category: 'containers', title: '系统层' },
+  { path: 'containers/DisplayCollector', category: 'containers', title: '显示收集器' },
+  
+  // 资源节点
+  { path: 'resource/texture', category: 'resources', title: '纹理资源' },
+  { path: 'resource/audio', category: 'resources', title: '音频资源' },
+  { path: 'resource/group', category: 'resources', title: '资源组' },
+  { path: 'resource/imageloader', category: 'resources', title: '图像加载器' },
+  
+  // 场景节点
+  { path: 'scene/PixiApp', category: 'scenes', title: 'Pixi应用' },
+  { path: 'pixi/scene/pixiStage', category: 'scenes', title: 'Pixi舞台' },
+  
+  // 事件节点
+  { path: 'event/handler', category: 'events', title: 'Pixi事件' },
+  
+  // 工具节点
+  { path: 'tools/color_picker', category: 'tools', title: '颜色选择器' }
+];
 
-/**
- * 4. 事件类节点（Event）
- * - 代表用户输入、定时器、碰撞、消息等交互或时序事件
- * - 端口类型: event, signal, timer, mouse_event, keyboard_event
- * - 典型节点: 点击事件、定时器、碰撞检测、消息广播、输入监听等
- * - 作用: 驱动游戏逻辑、动画、状态切换等
- * - 默认颜色: 深紫色 #4B266A
- */
+// 获取节点分类
+export function getNodeCategory(nodeTypePath: string): string {
+  const mapping = NODE_TYPE_MAPPING.find(item => item.path === nodeTypePath);
+  if (mapping) {
+    return mapping.category;
+  }
+  
+  // 默认分类逻辑
+  if (nodeTypePath.startsWith('render/')) {
+    if (['rect', 'circle', 'line', 'triangle'].some(shape => nodeTypePath.includes(shape))) {
+      return 'render-shapes';
+    }
+    return 'render-ui';
+  } else if (nodeTypePath.startsWith('pixi/containers/')) {
+    return 'containers';
+  } else if (nodeTypePath.startsWith('resource/') || nodeTypePath.includes('Resource')) {
+    return 'resources';
+  } else if (nodeTypePath.startsWith('scene/')) {
+    return 'scenes';
+  } else if (nodeTypePath.startsWith('event/')) {
+    return 'events';
+  } else if (nodeTypePath.startsWith('tools/')) {
+    return 'tools';
+  }
+  
+  return 'basic';
+}
 
-/**
- * 5. 逻辑/流程类节点（Flow/Logic）
- * - 代表游戏逻辑、状态控制、数据处理等
- * - 端口类型: flow, state, data
- * - 典型节点: 条件判断、循环、变量、函数等
- * - 作用: 控制游戏流程、处理数据和状态
- * - 默认颜色: 深红色 #7C2323
- */
+// 获取节点标题
+export function getNodeTitle(nodeTypePath: string): string {
+  const mapping = NODE_TYPE_MAPPING.find(item => item.path === nodeTypePath);
+  if (mapping && mapping.title) {
+    return mapping.title;
+  }
+  
+  // 从路径中提取标题
+  const parts = nodeTypePath.split('/');
+  const shortName = parts[parts.length - 1];
+  return shortName.replace(/([A-Z])/g, ' $1').trim();
+}
 
 // ================= 节点颜色配置 =================
 export const NodeColors = {

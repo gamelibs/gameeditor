@@ -2,20 +2,14 @@ import { LiteGraph } from 'litegraph.js';
 import { registerColorPickerNode } from './pixi-nodes/tools/ColorPickerNode';
 import { registerPixiStageNode } from './pixi-nodes/scene/pixiStageNode';
 import { registerPixiAppNode } from './pixi-nodes/scene/pixiAppNode';
-import { registerPixiRectNode } from './pixi-nodes/render/pixiRectNode';
-import { registerPixiCircleNode } from './pixi-nodes/render/pixiCircleNode';
-import { registerPixiLineNode } from './pixi-nodes/render/pixiLineNode';
-import { registerPixiImageNode } from './pixi-nodes/render/pixiImageNode';
-import { registerPixiTriangleNode } from './pixi-nodes/render/pixiTriangleNode';
-import { registerTextNode } from './pixi-nodes/render/pixiTextNode';
-import { registerClickCounterNode } from './pixi-nodes/render/pixiClickCounterNode';
+
 
 import { registerTextureResourceNode } from './pixi-nodes/resource/textureResourceNode';
 import { registerAudioResourceNode } from './pixi-nodes/resource/audioResourceNode';
 import { registerResourceGroupNode } from './pixi-nodes/resource/resourceGroupNode';
 import { registerImageLoaderNode } from './pixi-nodes/resource/imageLoaderNode';
 import { registerTextureNode } from './pixi-nodes/resource/textureNode';
-import { registerPixiButtonNode } from './pixi-nodes/render/pixiButtonNode';
+
 import { registerPixiEventNode } from './pixi-nodes/event/pixiEventNode';
 import { registerRootContainerNode } from './pixi-nodes/containers/RootContainerNode';
 import { registerUILayerNode } from './pixi-nodes/containers/UILayerNode';
@@ -29,16 +23,11 @@ export function registerCustomNodes() {
   registerPixiAppNode(LiteGraph);
   registerPixiStageNode(LiteGraph);
 
-  registerPixiRectNode(LiteGraph);
-  registerPixiCircleNode(LiteGraph);
-  registerPixiLineNode(LiteGraph);
-  registerPixiImageNode(LiteGraph);
-  registerTextNode(LiteGraph);
-  registerClickCounterNode(LiteGraph);
+
   registerTextureResourceNode(LiteGraph);
   registerResourceGroupNode(LiteGraph);
   registerAudioResourceNode(LiteGraph);
-  registerPixiButtonNode(LiteGraph);
+
   registerPixiEventNode(LiteGraph);
   registerColorPickerNode(LiteGraph);
   registerRootContainerNode(LiteGraph);
@@ -46,7 +35,7 @@ export function registerCustomNodes() {
   registerGameLayerNode(LiteGraph);
   registerSystemLayerNode(LiteGraph);
   registerDisplayCollectorNode(LiteGraph);
-  registerPixiTriangleNode(LiteGraph);
+
   registerImageLoaderNode(LiteGraph);
   registerTextureNode(LiteGraph);
   

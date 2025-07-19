@@ -7,7 +7,6 @@ import { ThreeTabCodeGenerator } from './ThreeTabCodeGenerator';
  */
 export class ThreePanelUI {
   private graph: LGraph;
-  private gamePreviewCanvas!: HTMLCanvasElement;
   private codeGenerator: ThreeTabCodeGenerator;
   
   // 面板元素
@@ -180,6 +179,10 @@ export class ThreePanelUI {
     });
     
     // 游戏预览控制按钮
+    document.getElementById('openInNewWindowBtn')?.addEventListener('click', () => {
+      this.openGameInNewWindow();
+    });
+    
     document.getElementById('fullscreenBtn')?.addEventListener('click', () => {
       this.toggleFullscreen();
     });
@@ -189,12 +192,29 @@ export class ThreePanelUI {
     });
     
     // 代码预览控制按钮
+    document.getElementById('openCodeInNewWindowBtn')?.addEventListener('click', () => {
+      this.openCodeInNewWindow();
+    });
+    
     document.getElementById('copyCodeBtn')?.addEventListener('click', () => {
       this.copyGeneratedCode();
     });
     
     document.getElementById('downloadCodeBtn')?.addEventListener('click', () => {
       this.downloadGeneratedCode();
+    });
+    
+    // 顶部恢复按钮
+    document.getElementById('restoreGamePreviewBtn')?.addEventListener('click', () => {
+      this.restoreGamePreview();
+    });
+    
+    document.getElementById('restoreCodePreviewBtn')?.addEventListener('click', () => {
+      this.restoreCodePreview();
+    });
+    
+    document.getElementById('restoreAllPanelsBtn')?.addEventListener('click', () => {
+      this.restoreAllPanels();
     });
   }
 
@@ -319,6 +339,9 @@ export class ThreePanelUI {
     const container = this.gamePanel.querySelector('.game-preview-content') as HTMLElement;
     if (!container) return;
     
+    const iframe = document.getElementById('gamePreviewFrame') as HTMLIFrameElement;
+    if (!iframe) return;
+    
     const rect = container.getBoundingClientRect();
     const maxWidth = rect.width - 20; // 留出边距
     const maxHeight = rect.height - 80; // 为游戏信息留出空间
@@ -329,35 +352,21 @@ export class ThreePanelUI {
     const aspectRatio = designHeight / designWidth; // 约1.78 (接近16:9)
     
     // 根据容器大小计算最适合的显示尺寸
-    let canvasWidth = Math.min(maxWidth, 400); // 限制最大宽度为400px，便于预览
-    let canvasHeight = canvasWidth * aspectRatio;
+    let iframeWidth = Math.min(maxWidth, 375); // 限制最大宽度为375px，便于预览
+    let iframeHeight = iframeWidth * aspectRatio;
     
     // 如果高度超出容器，则按高度调整
-    if (canvasHeight > maxHeight) {
-      canvasHeight = maxHeight;
-      canvasWidth = canvasHeight / aspectRatio;
+    if (iframeHeight > maxHeight) {
+      iframeHeight = maxHeight;
+      iframeWidth = iframeHeight / aspectRatio;
     }
     
-    // 设置实际分辨率为设计尺寸
-    this.gamePreviewCanvas.width = designWidth;
-    this.gamePreviewCanvas.height = designHeight;
+    // 更新iframe尺寸
+    iframe.style.width = `${iframeWidth}px`;
+    iframe.style.height = `${iframeHeight}px`;
     
-    // 设置显示尺寸为缩放后的尺寸
-    this.gamePreviewCanvas.style.width = `${canvasWidth}px`;
-    this.gamePreviewCanvas.style.height = `${canvasHeight}px`;
-    
-    // 记录缩放比例，用于后续的坐标转换
-    const scaleX = canvasWidth / designWidth;
-    const scaleY = canvasHeight / designHeight;
-    (this.gamePreviewCanvas as any).scaleX = scaleX;
-    (this.gamePreviewCanvas as any).scaleY = scaleY;
-    
-    // 更新缩放信息显示
-    const scaleInfo = document.getElementById('scaleInfo');
-    if (scaleInfo) {
-      const scalePercent = Math.round(scaleX * 100);
-      scaleInfo.textContent = `缩放比例: ${scalePercent}% (${Math.round(canvasWidth)}×${Math.round(canvasHeight)})`;
-    }
+    // 更新缩放信息
+    this.updateScaleInfo();
   }
 
   private onGraphChanged(eventType: string, node?: LGraphNode) {
@@ -470,60 +479,30 @@ export class ThreePanelUI {
   }
 
   private updateGamePreview() {
-    // 这里会实际运行生成的代码并在画布上显示
-    // 暂时显示加载状态
+    // 更新iframe预览
+    const iframe = document.getElementById('gamePreviewFrame') as HTMLIFrameElement;
     const loadingIndicator = document.getElementById('gameLoadingIndicator');
-    if (loadingIndicator) {
+    
+    if (iframe && loadingIndicator) {
+      // 显示加载状态
       loadingIndicator.style.display = 'flex';
+      iframe.style.opacity = '0.3';
       
-      setTimeout(() => {
+      // 刷新iframe
+      iframe.src = iframe.src;
+      
+      // 监听iframe加载完成
+      iframe.onload = () => {
         loadingIndicator.style.display = 'none';
-        this.renderGamePreview();
-      }, 500);
+        iframe.style.opacity = '1';
+        this.updateScaleInfo();
+      };
     }
   }
 
   private renderGamePreview() {
-    const ctx = this.gamePreviewCanvas.getContext('2d');
-    if (!ctx) return;
-    
-    // 获取canvas的实际尺寸
-    const width = this.gamePreviewCanvas.width;  // 750
-    const height = this.gamePreviewCanvas.height; // 1334
-    
-    // 清空画布
-    ctx.fillStyle = '#222';
-    ctx.fillRect(0, 0, width, height);
-    
-    // 绘制移动端游戏风格的Hello World
-    ctx.fillStyle = '#4ECDC4';
-    ctx.font = `${Math.floor(width * 0.08)}px Arial`; // 字体大小根据宽度调整
-    ctx.textAlign = 'center';
-    ctx.fillText('Hello World!', width / 2, height * 0.4);
-    
-    // 显示设计尺寸信息
-    ctx.fillStyle = '#999';
-    ctx.font = `${Math.floor(width * 0.03)}px Arial`;
-    ctx.fillText(`设计尺寸: ${width} × ${height}`, width / 2, height * 0.5);
-    
-    // 显示节点数量信息
-    const nodeCount = (this.graph as any)._nodes ? (this.graph as any)._nodes.length : 0;
-    ctx.fillStyle = '#666';
-    ctx.font = `${Math.floor(width * 0.025)}px Arial`;
-    ctx.fillText(`节点数量: ${nodeCount}`, width / 2, height * 0.55);
-    
-    // 绘制移动端游戏常见的边框提示
-    ctx.strokeStyle = '#4ECDC4';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([10, 5]);
-    ctx.strokeRect(20, 20, width - 40, height - 40);
-    ctx.setLineDash([]); // 重置虚线
-    
-    // 在底部添加移动端相关信息
-    ctx.fillStyle = '#888';
-    ctx.font = `${Math.floor(width * 0.02)}px Arial`;
-    ctx.fillText('移动端游戏预览', width / 2, height * 0.9);
-    ctx.fillText('适配尺寸: iPhone 6/7/8 Plus', width / 2, height * 0.93);
+    // 现在使用iframe预览，这个方法保留用于兼容性
+    this.updateGamePreview();
   }
 
   private startRealtimeUpdates() {
@@ -570,6 +549,173 @@ export class ThreePanelUI {
         document.exitFullscreen();
       } else {
         gameContent.requestFullscreen();
+      }
+    }
+  }
+
+  private openGameInNewWindow() {
+    console.log('🪟 在新窗口打开游戏');
+    const gameUrl = '/build/index.html';
+    const newWindow = window.open(gameUrl, '_blank', 'width=750,height=1334,scrollbars=no,resizable=yes');
+    if (newWindow) {
+      newWindow.focus();
+      // 隐藏游戏预览面板，让节点编辑器占据更多空间
+      this.hideGamePreview();
+    } else {
+      this.showMessage('无法打开新窗口，请检查浏览器弹窗设置', 'error');
+    }
+  }
+
+  private openCodeInNewWindow() {
+    console.log('🪟 在新窗口打开代码预览');
+    const codeUrl = '/code-preview.html';
+    const newWindow = window.open(codeUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+    if (newWindow) {
+      newWindow.focus();
+      // 隐藏代码预览面板，让节点编辑器占据更多空间
+      this.hideCodePreview();
+    } else {
+      this.showMessage('无法打开新窗口，请检查浏览器弹窗设置', 'error');
+    }
+  }
+
+  private hideGamePreview() {
+    const gamePanel = document.getElementById('game-preview-panel');
+    const splitter1 = document.getElementById('splitter1');
+    
+    if (gamePanel && splitter1) {
+      gamePanel.classList.add('hidden');
+      splitter1.classList.add('hidden');
+      
+      // 让节点编辑器占据更多空间
+      const nodePanel = document.getElementById('node-editor-panel');
+      if (nodePanel) {
+        nodePanel.classList.add('fullscreen');
+      }
+      
+      // 显示顶部恢复按钮
+      this.showTopControls();
+      
+      console.log('🎯 游戏预览面板已隐藏');
+    }
+  }
+
+  private hideCodePreview() {
+    const codePanel = document.getElementById('code-preview-panel');
+    const splitter2 = document.getElementById('splitter2');
+    
+    if (codePanel && splitter2) {
+      codePanel.classList.add('hidden');
+      splitter2.classList.add('hidden');
+      
+      // 让节点编辑器占据更多空间
+      const nodePanel = document.getElementById('node-editor-panel');
+      if (nodePanel) {
+        nodePanel.classList.add('fullscreen');
+      }
+      
+      // 显示顶部恢复按钮
+      this.showTopControls();
+      
+      console.log('📄 代码预览面板已隐藏');
+    }
+  }
+
+  private showTopControls() {
+    const topControls = document.getElementById('top-panel-controls');
+    if (topControls) {
+      topControls.style.display = 'block';
+    }
+  }
+
+  private hideTopControls() {
+    const topControls = document.getElementById('top-panel-controls');
+    if (topControls) {
+      topControls.style.display = 'none';
+    }
+  }
+
+  private restoreGamePreview() {
+    const gamePanel = document.getElementById('game-preview-panel');
+    const splitter1 = document.getElementById('splitter1');
+    
+    if (gamePanel && splitter1) {
+      gamePanel.classList.remove('hidden');
+      splitter1.classList.remove('hidden');
+      
+      // 恢复节点编辑器尺寸
+      const nodePanel = document.getElementById('node-editor-panel');
+      if (nodePanel) {
+        nodePanel.classList.remove('fullscreen');
+      }
+      
+      // 检查是否还有其他隐藏的面板
+      this.checkTopControlsVisibility();
+      
+      console.log('🎯 游戏预览面板已恢复');
+    }
+  }
+
+  private restoreCodePreview() {
+    const codePanel = document.getElementById('code-preview-panel');
+    const splitter2 = document.getElementById('splitter2');
+    
+    if (codePanel && splitter2) {
+      codePanel.classList.remove('hidden');
+      splitter2.classList.remove('hidden');
+      
+      // 恢复节点编辑器尺寸
+      const nodePanel = document.getElementById('node-editor-panel');
+      if (nodePanel) {
+        nodePanel.classList.remove('fullscreen');
+      }
+      
+      // 检查是否还有其他隐藏的面板
+      this.checkTopControlsVisibility();
+      
+      console.log('📄 代码预览面板已恢复');
+    }
+  }
+
+  private restoreAllPanels() {
+    this.restoreGamePreview();
+    this.restoreCodePreview();
+    this.hideTopControls();
+    console.log('🔄 所有面板已恢复');
+  }
+
+  private checkTopControlsVisibility() {
+    const gamePanel = document.getElementById('game-preview-panel');
+    const codePanel = document.getElementById('code-preview-panel');
+    
+    const gameHidden = gamePanel?.classList.contains('hidden');
+    const codeHidden = codePanel?.classList.contains('hidden');
+    
+    if (gameHidden || codeHidden) {
+      this.showTopControls();
+    } else {
+      this.hideTopControls();
+    }
+  }
+
+  private updateScaleInfo() {
+    const iframe = document.getElementById('gamePreviewFrame') as HTMLIFrameElement;
+    const scaleRatioElement = document.getElementById('scaleRatio');
+    
+    if (iframe && scaleRatioElement) {
+      const container = this.gamePanel.querySelector('.game-preview-content') as HTMLElement;
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const designWidth = 750;
+        const designHeight = 1334;
+        const currentWidth = 375; // iframe当前宽度
+        const currentHeight = 667; // iframe当前高度
+        
+        const scaleX = currentWidth / designWidth;
+        const scaleY = currentHeight / designHeight;
+        const scale = Math.min(scaleX, scaleY);
+        
+        scaleRatioElement.textContent = scale.toFixed(2);
       }
     }
   }

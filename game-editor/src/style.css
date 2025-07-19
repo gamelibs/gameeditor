@@ -152,6 +152,43 @@ body, html {
   height: 100%;
 }
 
+/* 顶部切入按钮区域 */
+.top-panel-controls {
+  background: #2a2a2a;
+  border-bottom: 1px solid #444;
+  padding: 8px 0;
+  z-index: 100;
+}
+
+.panel-controls-container {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.restore-btn {
+  background: #4ECDC4;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.restore-btn:hover {
+  background: #44A08D;
+  transform: translateY(-1px);
+}
+
+.restore-btn:active {
+  transform: translateY(0);
+}
+
 /* 三栏布局样式 */
 .editor-panel {
   display: flex;
@@ -159,6 +196,7 @@ body, html {
   background: #1a1a1a;
   border-right: 1px solid #444;
   min-width: 300px;
+  transition: all 0.3s ease;
 }
 
 #node-editor-panel {
@@ -175,6 +213,22 @@ body, html {
   flex: 1; /* 代码预览占25% (1/4) */
   min-width: 350px;
   border-right: none;
+}
+
+/* 面板隐藏状态 */
+.editor-panel.hidden {
+  display: none;
+}
+
+/* 节点编辑器全屏模式 */
+#node-editor-panel.fullscreen {
+  flex: 3; /* 占据更多空间 */
+  min-width: 600px;
+}
+
+/* 分割条隐藏状态 */
+.vertical-splitter.hidden {
+  display: none;
 }
 
 /* 面板头部样式 */
@@ -257,23 +311,48 @@ body, html {
   align-items: center;
   justify-content: center;
   padding: 10px;
+  overflow: hidden;
+}
+
+/* 游戏信息显示 */
+.game-info {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.game-info .design-size {
+  font-weight: bold;
+  color: #4ECDC4;
+}
+
+.game-info .scale-info {
+  margin-top: 4px;
+  color: #ccc;
 }
 
 /* iframe预览容器 */
 .game-preview-content iframe {
-  width: 100%;
-  height: 100%;
-  max-width: 375px; /* 750/2 适配移动端 */
-  max-height: 667px; /* 1334/2 适配移动端 */
+  width: 375px; /* 750/2 设计尺寸的一半 */
+  height: 667px; /* 1334/2 设计尺寸的一半 */
   border: 2px solid #4ECDC4;
   border-radius: 8px;
   background: #222;
   box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
-  transition: transform 0.2s ease;
+  transition: all 0.3s ease;
+  transform-origin: center center;
 }
 
 .game-preview-content iframe:hover {
   transform: scale(1.02);
+  box-shadow: 0 6px 16px rgba(78, 205, 196, 0.4);
 }
 
 .game-canvas {
