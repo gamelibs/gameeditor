@@ -141,6 +141,12 @@ export class UIManager {
     // 创建代码生成器
     this.codeGenerator = new ThreeTabCodeGenerator(editorCore.graph);
 
+    // 连接代码预览面板
+    if (this.codePreviewPanel) {
+      this.codePreviewPanel.setGraph(editorCore.graph);
+      console.log('✅ 代码预览面板连接完成');
+    }
+
     console.log('✅ 编辑器核心连接完成');
   }
 

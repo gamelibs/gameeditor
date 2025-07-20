@@ -1,4 +1,6 @@
 import { EventBus } from '../../core/EventBus';
+import { ThreeTabCodeGenerator } from '../ThreeTabCodeGenerator';
+import { LGraph } from 'litegraph.js';
 
 /**
  * 代码预览面板 - 管理代码生成和显示
@@ -9,10 +11,21 @@ export class CodePreviewPanel {
   private isVisible: boolean = false;
   private currentTab: string = 'index';
   private gameData: any = null;
+  private codeGenerator: ThreeTabCodeGenerator | null = null;
+  private graph: LGraph | null = null;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
     this.init();
+  }
+
+  /**
+   * 设置图形对象，用于代码生成
+   */
+  setGraph(graph: LGraph) {
+    this.graph = graph;
+    this.codeGenerator = new ThreeTabCodeGenerator(graph);
+    console.log('📝 代码生成器已初始化');
   }
 
   /**
@@ -376,83 +389,67 @@ export class CodePreviewPanel {
   }
 
   /**
-   * 加载并显示代码
+   * 生成并显示代码
    */
   private generateCode() {
-    console.log('📝 加载代码文件，当前tab:', this.currentTab);
+    console.log('📝 生成代码，当前tab:', this.currentTab, '游戏数据:', this.gameData);
 
     switch (this.currentTab) {
       case 'index':
-        this.loadIndexHtml();
+        this.generateIndexHtml();
         break;
       case 'gamecore':
-        this.loadGameCore();
+        this.generateGameCore();
         break;
       case 'logic':
-        this.loadLogic();
+        this.generateLogicJs();
         break;
     }
   }
 
   /**
-   * 加载index.html文件
+   * 生成index.html代码
    */
-  private async loadIndexHtml() {
-    try {
-      console.log('📝 加载 build/index.html');
-      const response = await fetch('./build/index.html');
-      if (response.ok) {
-        const code = await response.text();
-        this.updateCodeDisplay('code-index', code);
-        console.log('✅ index.html 加载成功');
-      } else {
-        throw new Error(`HTTP ${response.status}`);
-      }
-    } catch (error) {
-      console.error('❌ 加载 index.html 失败:', error);
-      this.updateCodeDisplay('code-index', `<!-- 加载失败: ${error} -->\n<!-- 请确保 build/index.html 文件存在 -->`);
+  private generateIndexHtml() {
+    if (!this.codeGenerator) {
+      this.updateCodeDisplay('code-index', '<!-- 代码生成器未初始化 -->');
+      return;
     }
+
+    const code = this.codeGenerator.generateIndexHtml();
+    this.updateCodeDisplay('code-index', code);
+    console.log('✅ index.html 代码已生成');
   }
 
   /**
-   * 加载gamecore.js文件
+   * 生成gamecore.js代码
    */
-  private async loadGameCore() {
-    try {
-      console.log('📝 加载 build/gamecore.js');
-      const response = await fetch('./build/gamecore.js');
-      if (response.ok) {
-        const code = await response.text();
-        this.updateCodeDisplay('code-gamecore', code);
-        console.log('✅ gamecore.js 加载成功');
-      } else {
-        throw new Error(`HTTP ${response.status}`);
-      }
-    } catch (error) {
-      console.error('❌ 加载 gamecore.js 失败:', error);
-      this.updateCodeDisplay('code-gamecore', `// 加载失败: ${error}\n// 请确保 build/gamecore.js 文件存在`);
+  private generateGameCore() {
+    if (!this.codeGenerator) {
+      this.updateCodeDisplay('code-gamecore', '// 代码生成器未初始化');
+      return;
     }
+
+    const code = this.codeGenerator.generateRuntimeEngine();
+    this.updateCodeDisplay('code-gamecore', code);
+    console.log('✅ gamecore.js 代码已生成');
   }
 
   /**
-   * 加载logic.js文件
+   * 生成logic.js代码
    */
-  private async loadLogic() {
-    try {
-      console.log('📝 加载 build/logic.js');
-      const response = await fetch('./build/logic.js');
-      if (response.ok) {
-        const code = await response.text();
-        this.updateCodeDisplay('code-logic', code);
-        console.log('✅ logic.js 加载成功');
-      } else {
-        throw new Error(`HTTP ${response.status}`);
-      }
-    } catch (error) {
-      console.error('❌ 加载 logic.js 失败:', error);
-      this.updateCodeDisplay('code-logic', `// 加载失败: ${error}\n// 请确保 build/logic.js 文件存在`);
+  private generateLogicJs() {
+    if (!this.codeGenerator) {
+      this.updateCodeDisplay('code-logic', '// 代码生成器未初始化');
+      return;
     }
+
+    const code = this.codeGenerator.generateGameLogic();
+    this.updateCodeDisplay('code-logic', code);
+    console.log('✅ logic.js 代码已生成');
   }
+
+
 
 
 

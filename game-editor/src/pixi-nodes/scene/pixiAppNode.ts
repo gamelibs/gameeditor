@@ -120,7 +120,7 @@ export function registerPixiAppNode(LiteGraph: any) {
       gameData: gameData
     });
 
-    // 发送事件给UI系统
+    // 发送事件给UI系统（代码预览）
     const event = new CustomEvent('pixi-app-node-changed', {
       detail: {
         nodeId: this.id,
@@ -130,7 +130,31 @@ export function registerPixiAppNode(LiteGraph: any) {
     });
     document.dispatchEvent(event);
 
-    Logger.info('PixiAppNode', '代码生成事件已发送');
+    // 🔥 热更新：发送数据到iframe游戏
+    this._sendDataToGame(gameData);
+
+    Logger.info('PixiAppNode', '代码生成和热更新事件已发送');
+  };
+
+  PixiAppNode.prototype._sendDataToGame = function(gameData: any) {
+    try {
+      // 查找游戏iframe
+      const gameIframe = document.querySelector('iframe[src*="build/index.html"]') as HTMLIFrameElement;
+
+      if (gameIframe && gameIframe.contentWindow) {
+        // 发送数据到iframe
+        gameIframe.contentWindow.postMessage({
+          type: 'update-game-graph',
+          data: gameData
+        }, '*');
+
+        Logger.info('PixiAppNode', '游戏数据已发送到iframe', gameData);
+      } else {
+        Logger.warn('PixiAppNode', '找不到游戏iframe，跳过热更新');
+      }
+    } catch (error) {
+      Logger.error('PixiAppNode', '发送游戏数据失败', error);
+    }
   };
 
   PixiAppNode.prototype.onAdded = function() {
