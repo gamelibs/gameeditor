@@ -11,6 +11,8 @@ export class NodeLibraryPanel {
   private editorCore: EditorCore | null = null;
   private isInitialized = false;
   private panelElement: HTMLElement | null = null;
+  private expandedCategories = new Set<string>(['basic', 'render']); // 默认展开的分类
+  private expandedSubcategories = new Set<string>(); // 默认展开的二级分类
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -109,31 +111,128 @@ export class NodeLibraryPanel {
         color: #4ECDC4;
         font-size: 14px;
         font-weight: 600;
-        margin-bottom: 8px;
-        padding: 5px 0;
-        border-bottom: 1px solid #555;
+        margin-bottom: 0;
+        padding: 8px 10px;
+        background: rgba(78, 205, 196, 0.1);
+        border: 1px solid #555;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        user-select: none;
+      }
+
+      .category-title:hover {
+        background: rgba(78, 205, 196, 0.2);
+        border-color: #4ECDC4;
+      }
+
+      .category-title.collapsed {
+        border-radius: 4px 4px 0 0;
+      }
+
+      .category-expand-icon {
+        font-size: 12px;
+        transition: transform 0.2s ease;
+      }
+
+      .category-title.collapsed .category-expand-icon {
+        transform: rotate(-90deg);
       }
 
       .node-list {
         display: flex;
         flex-direction: column;
         gap: 2px;
+        max-height: 1000px;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        border: 1px solid #555;
+        border-top: none;
+        border-radius: 0 0 4px 4px;
+        background: rgba(0, 0, 0, 0.2);
+      }
+
+      .node-list.collapsed {
+        max-height: 0;
+        border: none;
       }
 
       .node-item {
         background: rgba(255, 255, 255, 0.05);
-        border: 1px solid #555;
-        border-radius: 4px;
-        padding: 8px 10px;
+        border: none;
+        border-bottom: 1px solid #444;
+        padding: 8px 15px;
         cursor: pointer;
         transition: all 0.2s ease;
         color: #ffffff;
+        margin: 0;
       }
 
       .node-item:hover {
         background: rgba(78, 205, 196, 0.2);
-        border-color: #4ECDC4;
+        border-bottom-color: #4ECDC4;
         transform: translateX(2px);
+      }
+
+      .node-item:last-child {
+        border-bottom: none;
+      }
+
+      /* 二级分类样式 */
+      .subcategory {
+        margin-left: 10px;
+        margin-top: 5px;
+      }
+
+      .subcategory-title {
+        color: #999;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        user-select: none;
+        margin-bottom: 3px;
+      }
+
+      .subcategory-title:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #4ECDC4;
+      }
+
+      .subcategory-expand-icon {
+        font-size: 10px;
+        transition: transform 0.2s ease;
+      }
+
+      .subcategory-title.collapsed .subcategory-expand-icon {
+        transform: rotate(-90deg);
+      }
+
+      .subcategory-nodes {
+        max-height: 500px;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 3px;
+        margin-bottom: 5px;
+      }
+
+      .subcategory-nodes.collapsed {
+        max-height: 0;
+      }
+
+      .subcategory-nodes .node-item {
+        padding-left: 20px;
+        font-size: 12px;
       }
 
       .node-item-title {
@@ -241,65 +340,93 @@ export class NodeLibraryPanel {
     const body = document.getElementById('node-library-body');
     if (!body) return;
 
-    // 获取所有已注册的节点类型
-    const nodeTypes = this.getRegisteredNodeTypes();
-    
-    if (nodeTypes.length === 0) {
-      body.innerHTML = `
-        <div style="text-align: center; padding: 20px; color: #999;">
-          <p>💡 提示：在画布上右键可以添加节点</p>
-          <p>🎮 LiteGraph编辑器已启用</p>
-          <p>📚 节点将在注册后显示在这里</p>
-        </div>
-      `;
-      return;
-    }
-    
-    // 按分类组织节点
-    const categories = this.organizeNodesByCategory(nodeTypes);
-    
-    // 清空现有内容
-    body.innerHTML = '';
-    
-    // 渲染分类和节点
-    Object.entries(categories).forEach(([categoryName, nodes]) => {
+    try {
+      // 获取所有已注册的节点类型
+      const nodeTypes = this.getRegisteredNodeTypes();
+
+      if (nodeTypes.length === 0) {
+        body.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: #999;">
+            <p>💡 提示：在画布上右键可以添加节点</p>
+            <p>🎮 LiteGraph编辑器已启用</p>
+            <p>📚 节点将在注册后显示在这里</p>
+          </div>
+        `;
+        return;
+      }
+
+      // 按分类组织节点
+      const categories = this.organizeNodesByCategory(nodeTypes);
+
+      // 清空现有内容
+      body.innerHTML = '';
+
+      console.log('📚 开始渲染节点分类:', Object.keys(categories));
+
+      // 渲染分类和节点
+      Object.entries(categories).forEach(([categoryName, nodes]) => {
       const categoryDiv = document.createElement('div');
       categoryDiv.className = 'node-category';
-      
+
+      // 创建一级分类标题
       const categoryTitle = document.createElement('div');
       categoryTitle.className = 'category-title';
-      categoryTitle.textContent = categoryName;
-      
+
+      const categoryTitleText = document.createElement('span');
+      categoryTitleText.textContent = this.getCategoryDisplayName(categoryName);
+
+      const expandIcon = document.createElement('span');
+      expandIcon.className = 'category-expand-icon';
+      expandIcon.textContent = '▼';
+
+      categoryTitle.appendChild(categoryTitleText);
+      categoryTitle.appendChild(expandIcon);
+
+      // 创建节点列表容器
       const nodeList = document.createElement('div');
       nodeList.className = 'node-list';
-      
-      nodes.forEach(nodeInfo => {
-        const nodeItem = document.createElement('div');
-        nodeItem.className = `node-item ${this.getNodeCategoryClass(nodeInfo.type)}`;
-        
-        const nodeTitle = document.createElement('div');
-        nodeTitle.className = 'node-item-title';
-        nodeTitle.textContent = nodeInfo.title;
-        
-        nodeItem.appendChild(nodeTitle);
-        
-        if (nodeInfo.desc) {
-          const nodeDesc = document.createElement('div');
-          nodeDesc.className = 'node-item-desc';
-          nodeDesc.textContent = nodeInfo.desc;
-          nodeItem.appendChild(nodeDesc);
-        }
-        
-        // 点击添加节点
-        nodeItem.onclick = () => this.addNodeToGraph(nodeInfo.type);
-        
+
+      // 设置默认展开状态
+      const isExpanded = this.expandedCategories.has(categoryName);
+      if (!isExpanded) {
+        nodeList.classList.add('collapsed');
+        categoryTitle.classList.add('collapsed');
+      }
+
+      // 暂时简化：直接显示所有节点，不使用二级分类
+      nodes.forEach((nodeInfo: any) => {
+        const nodeItem = this.createNodeItem(nodeInfo);
         nodeList.appendChild(nodeItem);
       });
-      
-      categoryDiv.appendChild(categoryTitle);
-      categoryDiv.appendChild(nodeList);
-      body.appendChild(categoryDiv);
-    });
+
+      // 添加点击事件切换展开/收起
+      categoryTitle.onclick = () => {
+        const isCollapsed = nodeList.classList.contains('collapsed');
+        if (isCollapsed) {
+          nodeList.classList.remove('collapsed');
+          categoryTitle.classList.remove('collapsed');
+          this.expandedCategories.add(categoryName);
+        } else {
+          nodeList.classList.add('collapsed');
+          categoryTitle.classList.add('collapsed');
+          this.expandedCategories.delete(categoryName);
+        }
+      };
+
+        categoryDiv.appendChild(categoryTitle);
+        categoryDiv.appendChild(nodeList);
+        body.appendChild(categoryDiv);
+      });
+
+    } catch (error) {
+      console.error('❌ 渲染节点分类错误:', error);
+      body.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: #ff6b6b;">
+          <p>❌ 节点库渲染失败</p>
+          <p>请查看控制台获取详细信息</p>
+        </div>
+      `;
+    }
   }
 
   /**
@@ -307,18 +434,155 @@ export class NodeLibraryPanel {
    */
   private getRegisteredNodeTypes() {
     const nodeTypes: Array<{type: string, title: string, desc?: string}> = [];
-    
+
     // 遍历LiteGraph中已注册的节点类型
     for (const nodeType in LiteGraph.registered_node_types) {
-      const nodeClass = LiteGraph.registered_node_types[nodeType];
+      const nodeClass = LiteGraph.registered_node_types[nodeType] as any;
       nodeTypes.push({
         type: nodeType,
         title: nodeClass.title || nodeType.split('/').pop() || nodeType,
         desc: nodeClass.desc || ''
       });
     }
-    
+
     return nodeTypes;
+  }
+
+  /**
+   * 获取分类显示名称
+   */
+  private getCategoryDisplayName(categoryName: string): string {
+    const categoryMap: {[key: string]: string} = {
+      'basic': '🔧 基础节点',
+      'render': '🎨 渲染节点',
+      'container': '📦 容器节点',
+      'resource': '📁 资源节点',
+      'scene': '🎬 场景节点',
+      'event': '⚡ 事件节点',
+      'tool': '🛠️ 工具节点',
+      'math': '🔢 数学节点',
+      'logic': '🧠 逻辑节点',
+      'input': '🎮 输入节点',
+      'output': '📺 输出节点'
+    };
+
+    return categoryMap[categoryName] || `📋 ${categoryName}`;
+  }
+
+  /**
+   * 按二级分类组织节点
+   */
+  private organizeNodesBySubcategory(nodes: Array<{type: string, title: string, desc?: string}>) {
+    const subcategories: {[key: string]: Array<{type: string, title: string, desc?: string}>} = {};
+
+    try {
+      nodes.forEach(nodeInfo => {
+        const parts = nodeInfo.type.split('/');
+        const subcategory = parts[1] || '通用';
+
+        if (!subcategories[subcategory]) {
+          subcategories[subcategory] = [];
+        }
+
+        // 添加调试信息
+        if (!Array.isArray(subcategories[subcategory])) {
+          console.error('❌ subcategories[subcategory] 不是数组:', subcategory, subcategories[subcategory]);
+          subcategories[subcategory] = [];
+        }
+
+        subcategories[subcategory].push(nodeInfo);
+      });
+    } catch (error) {
+      console.error('❌ organizeNodesBySubcategory 错误:', error);
+      return { '通用': nodes };
+    }
+
+    return subcategories;
+  }
+
+  /**
+   * 创建二级分类
+   */
+  private createSubcategory(subCategoryName: string, nodes: Array<{type: string, title: string, desc?: string}>): HTMLElement {
+    const subcategoryDiv = document.createElement('div');
+    subcategoryDiv.className = 'subcategory';
+
+    // 创建二级分类标题
+    const subcategoryTitle = document.createElement('div');
+    subcategoryTitle.className = 'subcategory-title';
+
+    const titleText = document.createElement('span');
+    titleText.textContent = subCategoryName;
+
+    const expandIcon = document.createElement('span');
+    expandIcon.className = 'subcategory-expand-icon';
+    expandIcon.textContent = '▼';
+
+    subcategoryTitle.appendChild(titleText);
+    subcategoryTitle.appendChild(expandIcon);
+
+    // 创建节点容器
+    const nodesContainer = document.createElement('div');
+    nodesContainer.className = 'subcategory-nodes';
+
+    // 设置默认展开状态（二级分类默认收起）
+    const subcategoryKey = `${subCategoryName}`;
+    const isExpanded = this.expandedSubcategories.has(subcategoryKey);
+    if (!isExpanded) {
+      nodesContainer.classList.add('collapsed');
+      subcategoryTitle.classList.add('collapsed');
+    }
+
+    // 添加节点
+    nodes.forEach(nodeInfo => {
+      const nodeItem = this.createNodeItem(nodeInfo);
+      nodesContainer.appendChild(nodeItem);
+    });
+
+    // 添加点击事件
+    subcategoryTitle.onclick = () => {
+      const isCollapsed = nodesContainer.classList.contains('collapsed');
+      if (isCollapsed) {
+        nodesContainer.classList.remove('collapsed');
+        subcategoryTitle.classList.remove('collapsed');
+        this.expandedSubcategories.add(subcategoryKey);
+      } else {
+        nodesContainer.classList.add('collapsed');
+        subcategoryTitle.classList.add('collapsed');
+        this.expandedSubcategories.delete(subcategoryKey);
+      }
+    };
+
+    subcategoryDiv.appendChild(subcategoryTitle);
+    subcategoryDiv.appendChild(nodesContainer);
+
+    return subcategoryDiv;
+  }
+
+  /**
+   * 创建节点项
+   */
+  private createNodeItem(nodeInfo: {type: string, title: string, desc?: string}): HTMLElement {
+    const nodeItem = document.createElement('div');
+    nodeItem.className = `node-item ${this.getNodeCategoryClass(nodeInfo.type)}`;
+
+    const nodeTitle = document.createElement('div');
+    nodeTitle.className = 'node-item-title';
+    nodeTitle.textContent = nodeInfo.title;
+
+    nodeItem.appendChild(nodeTitle);
+
+    if (nodeInfo.desc) {
+      const nodeDesc = document.createElement('div');
+      nodeDesc.className = 'node-item-desc';
+      nodeDesc.textContent = nodeInfo.desc;
+      nodeItem.appendChild(nodeDesc);
+    }
+
+    // 点击添加节点
+    nodeItem.onclick = () => this.addNodeToGraph(nodeInfo.type);
+
+    return nodeItem;
   }
 
   /**
@@ -429,5 +693,42 @@ export class NodeLibraryPanel {
     if (this.panelElement) {
       this.panelElement.classList.remove('open');
     }
+  }
+
+  /**
+   * 重置节点库状态 - 确保独立性
+   */
+  reset() {
+    // 重置展开状态
+    this.expandedCategories.clear();
+    this.expandedCategories.add('basic');
+    this.expandedCategories.add('render');
+    this.expandedSubcategories.clear();
+
+    // 重新填充节点列表
+    this.populateNodeList();
+
+    console.log('🔄 节点库状态已重置');
+  }
+
+  /**
+   * 刷新节点库 - 重新获取最新的节点类型
+   */
+  refresh() {
+    console.log('🔄 刷新节点库');
+    this.populateNodeList();
+  }
+
+  /**
+   * 获取节点库状态 - 用于调试
+   */
+  getStatus() {
+    return {
+      isInitialized: this.isInitialized,
+      isVisible: this.panelElement?.classList.contains('open') || false,
+      expandedCategories: Array.from(this.expandedCategories),
+      expandedSubcategories: Array.from(this.expandedSubcategories),
+      registeredNodeCount: Object.keys(LiteGraph.registered_node_types || {}).length
+    };
   }
 }
