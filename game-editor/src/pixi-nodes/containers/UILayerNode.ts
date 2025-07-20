@@ -387,7 +387,7 @@ console.log('UI层级系统初始化 (调试模式开启)');
   /**
    * 处理节点属性
    */
-  processProperties(context: any): Record<string, any> {
+  processProperties(_context: any): Record<string, any> {
     return {
       debug: this.properties.debug || false,
       uniqueId: this.properties.uniqueId || `ui_layer_${Date.now()}`

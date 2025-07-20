@@ -9,20 +9,14 @@ export class ThreePanelUI {
   private graph: LGraph;
   private codeGenerator: ThreeTabCodeGenerator;
   
-  // 面板元素
-  private nodePanel!: HTMLElement;
+  // 面板元素（暂时未使用，保留用于未来扩展）
+  // private nodePanel!: HTMLElement;
   private gamePanel!: HTMLElement;
-  private codePanel!: HTMLElement;
+  // private codePanel!: HTMLElement;
   
-  // 分割条元素
-  private splitter1!: HTMLElement;
-  private splitter2!: HTMLElement;
-  
-  // 分割条拖拽状态
-  private isDragging = false;
-  private currentSplitter: HTMLElement | null = null;
-  private startX = 0;
-  private startWidths: number[] = [];
+  // 分割条元素（已废弃）
+  // private splitter1!: HTMLElement;
+  // private splitter2!: HTMLElement;
   
   // 图形变化监听
   private lastNodeCount = 0;
@@ -32,19 +26,18 @@ export class ThreePanelUI {
     this.codeGenerator = new ThreeTabCodeGenerator(graph);
     this.initializeElements();
     this.setupEventListeners();
-    this.setupPanelResizing();
+    // this.setupPanelResizing(); // 移除拖动分割条逻辑
     this.startRealtimeUpdates();
   }
 
   private initializeElements() {
     // 获取面板元素
-    this.nodePanel = document.getElementById('node-editor-panel')!;
+    // this.nodePanel = document.getElementById('node-editor-panel')!;
     this.gamePanel = document.getElementById('game-preview-panel')!;
-    this.codePanel = document.getElementById('code-preview-panel')!;
-    
-    // 获取分割条元素
-    this.splitter1 = document.getElementById('splitter1')!;
-    this.splitter2 = document.getElementById('splitter2')!;
+    // this.codePanel = document.getElementById('code-preview-panel')!;
+    // 不再获取分割条元素
+    // this.splitter1 = document.getElementById('splitter1')!;
+    // this.splitter2 = document.getElementById('splitter2')!;
     
     // 游戏预览现在使用iframe，不需要canvas
     // this.gamePreviewCanvas = document.getElementById('gamePreviewCanvas') as HTMLCanvasElement;
@@ -88,7 +81,6 @@ export class ThreePanelUI {
     
     // 窗口大小变化
     window.addEventListener('resize', () => {
-      this.resizeGameCanvas();
       this.updateScaleInfo(); // 更新缩放信息
     });
     
@@ -249,126 +241,7 @@ export class ThreePanelUI {
     });
   }
 
-  private setupPanelResizing() {
-    // 分割条1的拖拽
-    this.splitter1.addEventListener('mousedown', (e) => {
-      this.startDrag(e, this.splitter1);
-    });
-    
-    // 分割条2的拖拽
-    this.splitter2.addEventListener('mousedown', (e) => {
-      this.startDrag(e, this.splitter2);
-    });
-    
-    // 全局鼠标事件
-    document.addEventListener('mousemove', (e) => {
-      this.onDrag(e);
-    });
-    
-    document.addEventListener('mouseup', () => {
-      this.endDrag();
-    });
-  }
-
-  private startDrag(e: MouseEvent, splitter: HTMLElement) {
-    this.isDragging = true;
-    this.currentSplitter = splitter;
-    this.startX = e.clientX;
-    
-    // 记录当前面板宽度
-    const nodeWidth = this.nodePanel.getBoundingClientRect().width;
-    const gameWidth = this.gamePanel.getBoundingClientRect().width;
-    const codeWidth = this.codePanel.getBoundingClientRect().width;
-    
-    this.startWidths = [nodeWidth, gameWidth, codeWidth];
-    
-    // 添加拖拽样式
-    document.body.style.cursor = 'col-resize';
-    document.body.style.userSelect = 'none';
-    
-    e.preventDefault();
-  }
-
-  private onDrag(e: MouseEvent) {
-    if (!this.isDragging || !this.currentSplitter) return;
-    
-    const deltaX = e.clientX - this.startX;
-    const mainContent = document.getElementById('main-content')!;
-    const totalWidth = mainContent.getBoundingClientRect().width - 8; // 减去分割条宽度
-    
-    if (this.currentSplitter === this.splitter1) {
-      // 调整节点编辑器和游戏预览的宽度
-      const newNodeWidth = Math.max(300, this.startWidths[0] + deltaX);
-      const newGameWidth = Math.max(250, this.startWidths[1] - deltaX);
-      
-      const nodePercent = (newNodeWidth / totalWidth) * 100;
-      const gamePercent = (newGameWidth / totalWidth) * 100;
-      const codePercent = (this.startWidths[2] / totalWidth) * 100;
-      
-      this.nodePanel.style.flex = `0 0 ${nodePercent}%`;
-      this.gamePanel.style.flex = `0 0 ${gamePercent}%`;
-      this.codePanel.style.flex = `0 0 ${codePercent}%`;
-      
-    } else if (this.currentSplitter === this.splitter2) {
-      // 调整游戏预览和代码预览的宽度
-      const newGameWidth = Math.max(250, this.startWidths[1] + deltaX);
-      const newCodeWidth = Math.max(300, this.startWidths[2] - deltaX);
-      
-      const nodePercent = (this.startWidths[0] / totalWidth) * 100;
-      const gamePercent = (newGameWidth / totalWidth) * 100;
-      const codePercent = (newCodeWidth / totalWidth) * 100;
-      
-      this.nodePanel.style.flex = `0 0 ${nodePercent}%`;
-      this.gamePanel.style.flex = `0 0 ${gamePercent}%`;
-      this.codePanel.style.flex = `0 0 ${codePercent}%`;
-    }
-    
-    // 更新游戏画布大小
-    this.resizeGameCanvas();
-  }
-
-  private endDrag() {
-    this.isDragging = false;
-    this.currentSplitter = null;
-    
-    // 移除拖拽样式
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-  }
-
-  private resizeGameCanvas() {
-    const container = this.gamePanel.querySelector('.game-preview-content') as HTMLElement;
-    if (!container) return;
-    
-    const iframe = document.getElementById('gamePreviewFrame') as HTMLIFrameElement;
-    if (!iframe) return;
-    
-    const rect = container.getBoundingClientRect();
-    const maxWidth = rect.width - 20; // 留出边距
-    const maxHeight = rect.height - 80; // 为游戏信息留出空间
-    
-    // 移动端游戏常用设计尺寸
-    const designWidth = 750;  // 设计宽度
-    const designHeight = 1334; // 设计高度 (iPhone 6/7/8 Plus)
-    const aspectRatio = designHeight / designWidth; // 约1.78 (接近16:9)
-    
-    // 根据容器大小计算最适合的显示尺寸
-    let iframeWidth = Math.min(maxWidth, 375); // 限制最大宽度为375px，便于预览
-    let iframeHeight = iframeWidth * aspectRatio;
-    
-    // 如果高度超出容器，则按高度调整
-    if (iframeHeight > maxHeight) {
-      iframeHeight = maxHeight;
-      iframeWidth = iframeHeight / aspectRatio;
-    }
-    
-    // 更新iframe尺寸
-    iframe.style.width = `${iframeWidth}px`;
-    iframe.style.height = `${iframeHeight}px`;
-    
-    // 更新缩放信息
-    this.updateScaleInfo();
-  }
+  // 移除setupPanelResizing、startDrag、onDrag、endDrag等方法
 
   private onGraphChanged(eventType: string, node?: LGraphNode) {
     console.log(`📊 图形变化: ${eventType}`, node?.title || '');
@@ -408,10 +281,43 @@ export class ThreePanelUI {
   }
 
   private updateGeneratedCode() {
-    // 更新所有代码显示
-    this.updateCodeDisplay('game-logic');
-    this.updateCodeDisplay('runtime');
-    this.updateCodeDisplay('index-html');
+    try {
+      // 使用增强的代码生成器
+      const gameLogicCode = this.codeGenerator.generateGameLogic();
+      
+      // 更新游戏逻辑代码显示
+      const gameLogicDisplay = document.getElementById('gameLogicDisplay');
+      if (gameLogicDisplay) {
+        gameLogicDisplay.textContent = gameLogicCode;
+      }
+      
+      // 更新运行时引擎代码
+      const runtimeCode = this.codeGenerator.generateRuntime();
+      const runtimeDisplay = document.getElementById('runtimeDisplay');
+      if (runtimeDisplay) {
+        runtimeDisplay.textContent = runtimeCode;
+      }
+      
+      // 更新HTML代码
+      const htmlCode = this.codeGenerator.generateIndexHtml();
+      const indexHtmlDisplay = document.getElementById('indexHtmlDisplay');
+      if (indexHtmlDisplay) {
+        indexHtmlDisplay.textContent = htmlCode;
+      }
+      
+      console.log('✅ 实时代码生成完成');
+      
+      // 如果有Pixi Stage节点，更新游戏预览
+      const nodes = (this.graph as any)._nodes || [];
+      const hasPixiStage = nodes.some((node: any) => node.type === 'pixi/scene/pixiStage');
+      
+      if (hasPixiStage) {
+        this.updateGamePreview();
+      }
+      
+    } catch (error) {
+      console.error('❌ 代码生成失败:', error);
+    }
   }
 
   private updateCodeDisplay(tabType: string) {
@@ -583,11 +489,13 @@ export class ThreePanelUI {
 
   private hideGamePreview() {
     const gamePanel = document.getElementById('game-preview-panel');
-    const splitter1 = document.getElementById('splitter1');
+    // const splitter1 = document.getElementById('splitter1'); // 移除分割条
     
-    if (gamePanel && splitter1) {
+    if (gamePanel) {
       gamePanel.classList.add('hidden');
-      splitter1.classList.add('hidden');
+      // if (splitter1) { // 移除分割条
+      //   splitter1.classList.add('hidden');
+      // }
       
       // 让节点编辑器占据更多空间
       const nodePanel = document.getElementById('node-editor-panel');
@@ -604,11 +512,13 @@ export class ThreePanelUI {
 
   private hideCodePreview() {
     const codePanel = document.getElementById('code-preview-panel');
-    const splitter2 = document.getElementById('splitter2');
+    // const splitter2 = document.getElementById('splitter2'); // 移除分割条
     
-    if (codePanel && splitter2) {
+    if (codePanel) {
       codePanel.classList.add('hidden');
-      splitter2.classList.add('hidden');
+      // if (splitter2) { // 移除分割条
+      //   splitter2.classList.add('hidden');
+      // }
       
       // 让节点编辑器占据更多空间
       const nodePanel = document.getElementById('node-editor-panel');
@@ -639,11 +549,13 @@ export class ThreePanelUI {
 
   private restoreGamePreview() {
     const gamePanel = document.getElementById('game-preview-panel');
-    const splitter1 = document.getElementById('splitter1');
+    // const splitter1 = document.getElementById('splitter1'); // 移除分割条
     
-    if (gamePanel && splitter1) {
+    if (gamePanel) {
       gamePanel.classList.remove('hidden');
-      splitter1.classList.remove('hidden');
+      // if (splitter1) { // 移除分割条
+      //   splitter1.classList.remove('hidden');
+      // }
       
       // 恢复节点编辑器尺寸
       const nodePanel = document.getElementById('node-editor-panel');
@@ -660,11 +572,13 @@ export class ThreePanelUI {
 
   private restoreCodePreview() {
     const codePanel = document.getElementById('code-preview-panel');
-    const splitter2 = document.getElementById('splitter2');
+    // const splitter2 = document.getElementById('splitter2'); // 移除分割条
     
-    if (codePanel && splitter2) {
+    if (codePanel) {
       codePanel.classList.remove('hidden');
-      splitter2.classList.remove('hidden');
+      // if (splitter2) { // 移除分割条
+      //   splitter2.classList.remove('hidden');
+      // }
       
       // 恢复节点编辑器尺寸
       const nodePanel = document.getElementById('node-editor-panel');

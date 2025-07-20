@@ -3,105 +3,26 @@
  * 使用 Handlebars 模板引擎根据节点定义生成代码
  */
 
-import { BaseNode } from '../pixi-nodes/base/BaseNode';
+import { LGraph, LGraphNode } from 'litegraph.js';
 
-// LiteGraph类型声明
-interface LGraphNode {
-  id: string;
-  title?: string;
-  type?: string;
-  inputs?: Array<{
-    link?: number;
-    name?: string;
-    type?: string;
-  }>;
-  outputs?: Array<{
-    links?: number[];
-    name?: string;
-    type?: string;
-  }>;
-}
-
-interface LGraph {
-  links: Record<string, {
-    origin_id: string;
-    origin_slot: number;
-    target_id: string;
-    target_slot: number;
-  }>;
-  
-  getNodeById(id: string): LGraphNode | null;
-  getNodesInOrder(): LGraphNode[];
-}
-
-// 代码生成上下文
-export interface CodeGenerationContext {
-  // 节点实例映射表
-  nodeMap: Map<string, LGraphNode>;
-  
-  // 节点输出变量名映射表
-  outputVarNames: Map<string, string>;
-  
-  // 获取节点变量名
+/**
+ * 代码生成上下文
+ */
+interface CodeGenerationContext {
   getVarName(node: LGraphNode): string;
-  
-  // 获取连接到指定输入槽的输出节点变量名
-  getInputVarName(node: LGraphNode, inputIndex: number): string | undefined;
-  
-  // 注册一个部分模板
-  registerPartial(name: string, template: string): void;
+  getNodeById(id: string): LGraphNode | null;
+  getConnectedNodes(node: LGraphNode): LGraphNode[];
+  getNodeExecutionOrder(): LGraphNode[];
 }
 
 /**
- * 节点代码生成器类
+ * 节点代码生成器
+ * 负责将节点图转换为可执行的JavaScript代码
  */
 export class NodeCodeGenerator {
-  // 部分模板集合
-  private partialTemplates: Map<string, string> = new Map();
-  
-  constructor() {
-    // 注册默认部分模板
-    this.registerDefaultPartials();
-  }
-  
-  /**
-   * 注册默认部分模板
-   */
-  private registerDefaultPartials() {
-    // 处理容器输入的部分模板
-    this.partialTemplates.set('processContainerInput', `
-if ({{input}}) {
-  if (Array.isArray({{input}})) {
-    // 处理数组输入
-    {{input}}.forEach(item => {
-      if (item) {
-        {{container}}{{containerSuffix}}.addChild(item);
-      }
-    });
-  } else if ({{input}} instanceof PIXI.Container && {{input}}.children && {{input}}.children.length > 0) {
-    // 处理容器输入，提取子元素
-    const children = [...{{input}}.children];
-    children.forEach(child => {
-      // 从原父容器中移除
-      if (child && child.parent) {
-        child.parent.removeChild(child);
-      }
-      {{container}}{{containerSuffix}}.addChild(child);
-    });
-  } else {
-    // 处理单个对象
-    if ({{input}}.parent) {
-      {{input}}.parent.removeChild({{input}});
-    }
-    {{container}}{{containerSuffix}}.addChild({{input}});
-  }
-}
-`);
-  }
-  // 添加私有属性来保存当前生成的节点信息
-  private currentNodeCount: number = 0;
-  private currentNodeTypes: string[] = [];
-  
+  private varNameCounter = 0;
+  private nodeVarMap = new Map<string, string>();
+
   /**
    * 为节点图生成代码
    * @param graph 节点图实例
@@ -111,12 +32,8 @@ if ({{input}}) {
     // 创建代码生成上下文
     const context = this.createContext(graph);
     
-    // 分析节点依赖
+    // 分析节点依赖和执行顺序
     const sortedNodes = this.analyzeDependencies(graph);
-    
-    // 保存节点信息
-    this.currentNodeCount = sortedNodes.length;
-    this.currentNodeTypes = [...new Set(sortedNodes.map(node => node.type || 'unknown'))];
     
     // 收集所有导入声明
     const imports = this.collectImports(sortedNodes);
@@ -125,78 +42,42 @@ if ({{input}}) {
     const nodesCode = this.generateNodesCode(sortedNodes, context);
     
     // 组装完整代码
-    return this.assembleCode(imports, nodesCode);
+    return this.assembleCode(imports, nodesCode, sortedNodes);
   }
-  
+
   /**
    * 创建代码生成上下文
    */
   private createContext(graph: LGraph): CodeGenerationContext {
-    const nodeMap = new Map<string, LGraphNode>();
-    const outputVarNames = new Map<string, string>();
-    
-    // 收集所有节点
-    const nodes = graph.getNodesInOrder();
-    nodes.forEach((node: LGraphNode) => {
-      nodeMap.set(node.id, node);
-      
-      // 生成唯一变量名
-      const baseNode = node as unknown as BaseNode;
-      const prefix = baseNode.getVariablePrefix?.() || 'node';
-      const varName = `${prefix}_${node.id.replace ? node.id.replace(/[^\w]/g, '_') : node.id}`;
-      
-      outputVarNames.set(node.id, varName);
-    });
-    
     return {
-      nodeMap,
-      outputVarNames,
-      
-      // 获取节点变量名
-      getVarName: (node: LGraphNode) => {
-        return outputVarNames.get(node.id) || `node_${node.id.replace(/[^\w]/g, '_')}`;
-      },
-      
-      // 获取连接到输入的节点变量名
-      getInputVarName: (node: LGraphNode, inputIndex: number) => {
-        const input = node.inputs?.[inputIndex];
-        if (!input || !input.link) return undefined;
-        
-        const linkInfo = graph.links[input.link];
-        if (!linkInfo) return undefined;
-        
-        const sourceNodeId = linkInfo.origin_id;
-        return outputVarNames.get(sourceNodeId);
-      },
-      
-      // 注册部分模板
-      registerPartial: (name: string, template: string) => {
-        this.partialTemplates.set(name, template);
-      }
+      getVarName: (node: LGraphNode) => this.getVarName(node),
+      getNodeById: (id: string) => this.getNodeById(graph, id),
+      getConnectedNodes: (node: LGraphNode) => this.getConnectedNodes(graph, node),
+      getNodeExecutionOrder: () => this.analyzeDependencies(graph)
     };
   }
-  
+
   /**
-   * 分析节点依赖关系，返回排序后的节点列表
+   * 分析节点依赖关系
    */
   private analyzeDependencies(graph: LGraph): LGraphNode[] {
-    const nodes = graph.getNodesInOrder();
+    const nodes = (graph as any)._nodes || [];
     const visited = new Set<string>();
-    const result: LGraphNode[] = [];
+    const sorted: LGraphNode[] = [];
     
-    // 简单拓扑排序，确保依赖节点先于被依赖节点处理
+    // 拓扑排序
     const visit = (node: LGraphNode) => {
       if (visited.has(node.id)) return;
       visited.add(node.id);
       
-      // 获取该节点所有输入连接
-      for (let i = 0; i < (node.inputs?.length || 0); i++) {
-        const input = node.inputs![i];
-        if (input.link) {
-          const linkInfo = graph.links[input.link];
-          if (linkInfo) {
-            const sourceNodeId = linkInfo.origin_id;
-            const sourceNode = graph.getNodeById(sourceNodeId);
+      // 先处理依赖节点
+      const inputs = (node as any).inputs || [];
+      for (const input of inputs) {
+        const linkId = input.link;
+        if (linkId !== null && linkId !== undefined) {
+          const link = (graph as any).links?.[String(linkId)];
+          if (link) {
+            const sourceNode = this.getNodeById(graph, link.origin_id);
             if (sourceNode) {
               visit(sourceNode);
             }
@@ -204,61 +85,69 @@ if ({{input}}) {
         }
       }
       
-      result.push(node);
+      sorted.push(node);
     };
     
-    // 遍历所有节点
-    nodes.forEach(visit);
+    // 处理所有节点
+    for (const node of nodes) {
+      visit(node);
+    }
     
-    return result;
+    return sorted;
   }
-  
+
   /**
    * 收集所有节点的导入声明
    */
   private collectImports(nodes: LGraphNode[]): string[] {
-    const importSet = new Set<string>();
+    const imports = new Set<string>();
     
-    nodes.forEach(node => {
-      const baseNode = node as unknown as BaseNode;
-      if (baseNode.getImports) {
-        const imports = baseNode.getImports();
-        imports.forEach(imp => importSet.add(imp));
+    for (const node of nodes) {
+      const baseNode = node as unknown as any;
+      if (baseNode.getImports && typeof baseNode.getImports === 'function') {
+        const nodeImports = baseNode.getImports();
+        if (Array.isArray(nodeImports)) {
+          nodeImports.forEach(imp => imports.add(imp));
+        }
       }
-    });
+    }
     
-    return Array.from(importSet);
+    return Array.from(imports);
   }
-  
+
   /**
-   * 为所有节点生成代码
+   * 生成所有节点的代码
    */
   private generateNodesCode(nodes: LGraphNode[], context: CodeGenerationContext): string {
-    let code = '';
+    if (nodes.length === 0) {
+      return '    // 🔍 暂无节点，请在编辑器中添加节点';
+    }
+
+    const nodeCodeParts: string[] = [];
     
-    nodes.forEach(node => {
+    for (const node of nodes) {
       const nodeCode = this.generateNodeCode(node, context);
       if (nodeCode) {
-        code += `\n// ${node.title || node.type}\n`;
-        code += nodeCode;
-        code += '\n';
+        nodeCodeParts.push(nodeCode);
       }
-    });
+    }
     
-    return code;
+    return nodeCodeParts.join('\n\n');
   }
-  
+
   /**
    * 为单个节点生成代码
    */
   private generateNodeCode(node: LGraphNode, context: CodeGenerationContext): string {
-    const baseNode = node as unknown as BaseNode;
-    if (!baseNode.getCodeTemplate) {
-      return `// 节点 ${node.title || node.type} 未实现代码生成\n`;
+    const baseNode = node as unknown as any;
+    
+    // 检查节点是否支持代码生成
+    if (!baseNode.getCodeTemplate || typeof baseNode.getCodeTemplate !== 'function') {
+      return `    // 节点 ${node.title || node.type} 未实现代码生成`;
     }
     
     try {
-      // 获取模板
+      // 获取代码模板
       const template = baseNode.getCodeTemplate();
       
       // 获取变量名
@@ -271,137 +160,154 @@ if ({{input}}) {
       // 编译模板数据
       const templateData = {
         varName,
+        nodeTitle: node.title || node.type,
+        nodeType: node.type,
         ...props,
-        inputs
+        ...inputs
       };
       
-      // 使用简单模板替换（实际项目中可以使用 Handlebars 等模板引擎）
-      let processedCode = template;
+      // 使用模板替换
+      let processedCode = this.processTemplate(template, templateData);
       
-      // 替换变量
-      Object.entries(templateData).forEach(([key, value]) => {
-        if (typeof value === 'string') {
-          processedCode = processedCode.replace(new RegExp(`{{${key}}}`, 'g'), value);
-        }
-      });
+      // 添加节点注释
+      const comment = `    // 节点: ${node.title || node.type} (${node.type})`;
       
-      // 处理条件块 {{#if xxx}} ... {{/if}}
-      processedCode = this.processConditionals(processedCode, templateData);
+      return `${comment}\n${processedCode}`;
       
-      // 处理部分模板 {{> partialName param1 param2}}
-      processedCode = this.processPartials(processedCode, templateData);
-      
-      return processedCode;
     } catch (error) {
       console.error(`生成节点 ${node.title || node.type} 代码时出错:`, error);
-      return `// 节点 ${node.title || node.type} 代码生成出错: ${error}\n`;
+      return `    // 节点 ${node.title || node.type} 代码生成出错: ${error}`;
     }
   }
-  
+
+  /**
+   * 处理代码模板
+   */
+  private processTemplate(template: string, data: Record<string, any>): string {
+    let processedCode = template;
+    
+    // 替换变量占位符 {{varName}}
+    Object.entries(data).forEach(([key, value]) => {
+      if (typeof value === 'string') {
+        processedCode = processedCode.replace(new RegExp(`{{${key}}}`, 'g'), value);
+      } else if (typeof value === 'number' || typeof value === 'boolean') {
+        processedCode = processedCode.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+      }
+    });
+    
+    // 处理条件块 {{#if xxx}} ... {{/if}}
+    processedCode = this.processConditionals(processedCode, data);
+    
+    // 处理循环块 {{#each xxx}} ... {{/each}}
+    processedCode = this.processLoops(processedCode, data);
+    
+    return processedCode;
+  }
+
   /**
    * 处理条件块
    */
-  private processConditionals(template: string, data: any): string {
-    // 简单的条件块处理
-    const ifRegex = /{{#if\s+([^}]+)}}\n?([\s\S]*?){{\/if}}/g;
+  private processConditionals(code: string, data: Record<string, any>): string {
+    const conditionalRegex = /\{\{#if\s+(\w+)\}\}([\s\S]*?)\{\{\/if\}\}/g;
     
-    return template.replace(ifRegex, (_match, condition, content) => {
-      // 解析条件表达式
-      let conditionValue = false;
-      const conditionPath = condition.trim().split('.');
-      
-      // 遍历对象路径
-      let current = data;
-      for (const key of conditionPath) {
-        current = current?.[key];
-        if (current === undefined) break;
+    return code.replace(conditionalRegex, (match, condition, content) => {
+      if (data[condition]) {
+        return content;
       }
-      
-      // 检查条件是否成立
-      conditionValue = !!current;
-      
-      return conditionValue ? content : '';
+      return '';
     });
   }
-  
+
   /**
-   * 处理部分模板
+   * 处理循环块
    */
-  private processPartials(template: string, data: any): string {
-    // 查找部分模板引用 {{> partialName param1 param2 param3}}
-    const partialRegex = /{{>\s+([^\s}]+)([^}]*)}}/g;
+  private processLoops(code: string, data: Record<string, any>): string {
+    const loopRegex = /\{\{#each\s+(\w+)\}\}([\s\S]*?)\{\{\/each\}\}/g;
     
-    return template.replace(partialRegex, (_match, partialName, paramsStr) => {
-      // 获取部分模板
-      const partialTemplate = this.partialTemplates.get(partialName.trim());
-      if (!partialTemplate) {
-        return `/* 未找到部分模板: ${partialName} */`;
+    return code.replace(loopRegex, (match, arrayName, content) => {
+      const array = data[arrayName];
+      if (Array.isArray(array)) {
+        return array.map(item => {
+          let itemContent = content;
+          Object.entries(item).forEach(([key, value]) => {
+            itemContent = itemContent.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+          });
+          return itemContent;
+        }).join('\n');
       }
-      
-      // 解析参数
-      const params = paramsStr.trim().split(/\s+/);
-      const partialData: Record<string, any> = {};
-      
-      // 将参数映射为新的数据对象
-      params.forEach((param: any, index: number) => {
-        // 使用参数名或数字索引作为键
-        const key = `param${index}`;
-        
-        // 解析参数值
-        let value = param;
-        const paramPath = param.split('.');
-        
-        // 遍历对象路径获取值
-        let current = data;
-        for (const key of paramPath) {
-          current = current?.[key];
-          if (current === undefined) break;
-        }
-        
-        value = current !== undefined ? current : param;
-        
-        // 添加到模板数据
-        switch (index) {
-          case 0:
-            partialData.input = value;
-            break;
-          case 1:
-            partialData.container = value;
-            break;
-          case 2:
-            partialData.containerSuffix = value;
-            break;
-          default:
-            partialData[key] = value;
-        }
-      });
-      
-      // 递归处理部分模板中的变量替换
-      let processedPartial = partialTemplate;
-      
-      // 替换变量
-      Object.entries(partialData).forEach(([key, value]) => {
-        if (typeof value === 'string') {
-          processedPartial = processedPartial.replace(new RegExp(`{{${key}}}`, 'g'), value);
-        }
-      });
-      
-      // 处理条件块
-      processedPartial = this.processConditionals(processedPartial, partialData);
-      
-      return processedPartial;
+      return '';
     });
   }
-  
+
+  /**
+   * 获取节点的唯一变量名
+   */
+  private getVarName(node: LGraphNode): string {
+    if (this.nodeVarMap.has(node.id)) {
+      return this.nodeVarMap.get(node.id)!;
+    }
+    
+    const baseNode = node as unknown as any;
+    let prefix = 'node';
+    
+    // 尝试从节点获取变量前缀
+    if (baseNode.getVariablePrefix && typeof baseNode.getVariablePrefix === 'function') {
+      prefix = baseNode.getVariablePrefix();
+    } else if (node.type) {
+      // 从节点类型生成前缀
+      prefix = node.type.split('/').pop()?.toLowerCase() || 'node';
+    }
+    
+    const varName = `${prefix}_${++this.varNameCounter}`;
+    this.nodeVarMap.set(node.id, varName);
+    
+    return varName;
+  }
+
+  /**
+   * 根据ID获取节点
+   */
+  private getNodeById(graph: LGraph, id: string): LGraphNode | null {
+    const nodes = (graph as any)._nodes || [];
+    return nodes.find((node: LGraphNode) => node.id === id) || null;
+  }
+
+  /**
+   * 获取连接的节点
+   */
+  private getConnectedNodes(graph: LGraph, node: LGraphNode): LGraphNode[] {
+    const connected: LGraphNode[] = [];
+    const inputs = (node as any).inputs || [];
+    
+    for (const input of inputs) {
+      const linkId = input.link;
+      if (linkId !== null && linkId !== undefined) {
+        const link = (graph as any).links?.[String(linkId)];
+        if (link) {
+          const sourceNode = this.getNodeById(graph, link.origin_id);
+          if (sourceNode) {
+            connected.push(sourceNode);
+          }
+        }
+      }
+    }
+    
+    return connected;
+  }
+
   /**
    * 组装完整代码
    */
-  private assembleCode(imports: string[], nodesCode: string): string {
+  private assembleCode(imports: string[], nodesCode: string, nodes: LGraphNode[]): string {
+    const timestamp = new Date().toISOString();
+    const nodeCount = nodes.length;
+    const nodeTypes = [...new Set(nodes.map(node => node.type || 'unknown'))];
+    
     return `/**
- * 游戏逻辑代码 - 基于节点生成
- * 生成时间: ${new Date().toLocaleString()}
- * 节点数量: ${this.getNodeCount()}
- * 节点类型: ${this.getNodeTypes().join(', ')}
+ * 游戏逻辑代码 - 基于节点图生成
+ * 生成时间: ${timestamp}
+ * 节点数量: ${nodeCount}
+ * 节点类型: ${nodeTypes.join(', ')}
  */
 
 ${imports.length > 0 ? imports.join('\n') + '\n' : ''}
@@ -423,7 +329,7 @@ function initGameLogic(app) {
     score: 0,
     level: 1,
     isRunning: false,
-    nodeCount: ${this.getNodeCount()}
+    nodeCount: ${nodeCount}
   };
   
   console.log('🎮 初始化基于节点的游戏逻辑');
@@ -456,26 +362,21 @@ ${nodesCode}
 }
 
 // 导出初始化函数到全局
-window.initGameLogic = initGameLogic;
-`;
+window.initGameLogic = initGameLogic;`;
   }
 
   /**
-   * 获取节点数量（辅助方法）
+   * 获取节点数量
    */
-  private getNodeCount(): number {
-    // 这个方法需要在生成代码时调用，所以需要保存节点信息
-    return this.currentNodeCount || 0;
+  getNodeCount(): number {
+    return this.nodeVarMap.size;
   }
 
   /**
-   * 获取节点类型列表（辅助方法）
+   * 获取节点类型
    */
-  private getNodeTypes(): string[] {
-    return this.currentNodeTypes || [];
+  getNodeTypes(): string[] {
+    // 这里需要从外部传入节点信息
+    return [];
   }
-
-  // 添加私有属性来保存当前生成的节点信息
-  private currentNodeCount: number = 0;
-  private currentNodeTypes: string[] = [];
 }

@@ -21,75 +21,7 @@
     <!-- 游戏逻辑调度器 - 负责引入所有子模块 -->
     <script src="logic.js"></script>
     
-    <script>
-        // 用于接收来自编辑器的节点图数据
-        let currentGraphData = null;
-        let gameInstance = null;
-
-        // 监听来自父窗口(编辑器)的消息
-        window.addEventListener('message', (event) => {
-            if (event.data?.type === 'update-game-graph') {
-                console.log('Game graph updated');
-                currentGraphData = event.data.data;
-                
-                // 如果游戏已经初始化，更新游戏内容
-                if (gameInstance) {
-                    updateGameContent(currentGraphData);
-                }
-            }
-        });
-
-        // 更新游戏内容
-        function updateGameContent(graphData) {
-            try {
-                if (!graphData || !graphData.nodes) {
-                    // 清空现有游戏内容
-                    if (gameInstance && gameInstance.clearAll) {
-                        gameInstance.clearAll();
-                    }
-                    return;
-                }
-                
-                // 这里可以根据节点图数据重新构建游戏
-                // 暂时简单处理：重新初始化游戏逻辑
-                if (window.initGameLogic && GameCore.getApp()) {
-                    // 清空现有内容
-                    const app = GameCore.getApp();
-                    app.stage.removeChildren();
-                    
-                    // 重新初始化游戏逻辑
-                    gameInstance = initGameLogic(app, graphData);
-                }
-            } catch (error) {
-                console.error('Update game content failed:', error);
-            }
-        }
-
-        // 启动游戏
-        window.addEventListener('DOMContentLoaded', async () => {
-            try {
-                // 初始化游戏核心引擎
-                await GameCore.init(750, 1334);
-                
-                // 初始化游戏逻辑（传入当前的图数据）
-                gameInstance = initGameLogic(GameCore.getApp(), currentGraphData);
-                
-                // 将游戏添加到容器
-                const gameContainer = document.getElementById('gameContainer');
-                gameContainer.appendChild(GameCore.getApp().canvas);
-                
-                // 通知父窗口游戏已加载完成
-                if (window.parent !== window) {
-                    window.parent.postMessage({
-                        type: 'game-loaded',
-                        timestamp: Date.now()
-                    }, '*');
-                }
-                
-            } catch (error) {
-                console.error('Game startup failed:', error);
-            }
-        });
-    </script>
+    <!-- 游戏主入口 -->
+    <script src="main.js"></script>
 </body>
 </html>

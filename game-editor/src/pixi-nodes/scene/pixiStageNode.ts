@@ -11,16 +11,11 @@ import { GamePreviewManager } from '../../runtime/GamePreviewManager';
  * 4. 作为所有UI层和游戏对象的根容器
  */
 export class PixiStageNode extends BaseNode {
-  private gamePreview: GamePreviewManager;
-
   constructor() {
     super();
     
     this.title = 'Pixi Stage (游戏舞台)';
     this.boxcolor = "#050"; // 绿色表示这是系统级的核心节点
-    
-    // 获取游戏预览管理器实例
-    this.gamePreview = GamePreviewManager.getInstance();
     
     // 基本属性
     this.properties = {
@@ -42,102 +37,103 @@ export class PixiStageNode extends BaseNode {
     // 属性控制
     this.addWidget('number', 'Width', this.properties.width, (v: number) => {
       this.properties.width = v;
-      this._updateGameConfig();
+      // this._updateGameConfig();
     });
     
     this.addWidget('number', 'Height', this.properties.height, (v: number) => {
       this.properties.height = v;
-      this._updateGameConfig();
+      // this._updateGameConfig();
     });
     
     this.addWidget('text', 'Background', this.properties.background, (v: string) => {
       this.properties.background = v;
-      this._updateGameConfig();
+      // this._updateGameConfig();
     });
     
     this.addWidget('toggle', 'Auto Resize', this.properties.autoResize, (v: boolean) => {
       this.properties.autoResize = v;
-      this._updateGameConfig();
+      // this._updateGameConfig();
     });
 
     // 初始化游戏预览
-    this._initializeGamePreview();
+    // this._initializeGamePreview();
   }
 
   /**
    * 初始化游戏预览
    */
-  private async _initializeGamePreview() {
-    try {
-      // 初始化游戏预览管理器
-      await this.gamePreview.initialize('gamePreviewCanvas');
-      console.log('✅ PixiStageNode: 游戏预览初始化成功');
-    } catch (error) {
-      console.error('❌ PixiStageNode: 游戏预览初始化失败', error);
-    }
-  }
+  // private async _initializeGamePreview() {
+  //   try {
+  //     // 初始化游戏预览管理器
+  //     await this.gamePreview.initialize('gamePreviewCanvas');
+  //     console.log('✅ PixiStageNode: 游戏预览初始化成功');
+  //   } catch (error) {
+  //     console.error('❌ PixiStageNode: 游戏预览初始化失败', error);
+  //   }
+  // }
 
   /**
    * 更新游戏配置
    */
-  private _updateGameConfig() {
-    const config = {
-      width: this.properties.width,
-      height: this.properties.height,
-      backgroundColor: this.properties.background,
-      resizeToFit: this.properties.autoResize
-    };
+  // private _updateGameConfig() {
+  //   const config = {
+  //     width: this.properties.width,
+  //     height: this.properties.height,
+  //     backgroundColor: this.properties.background,
+  //     resizeToFit: this.properties.autoResize
+  //   };
     
-    // 应用配置到游戏预览管理器
-    if (this.gamePreview && this.gamePreview.updateConfig) {
-      this.gamePreview.updateConfig(config);
-    }
+  //   // 应用配置到游戏预览管理器
+  //   if (this.gamePreview && this.gamePreview.updateConfig) {
+  //     this.gamePreview.updateConfig(config);
+  //   }
     
-    console.log('🔧 PixiStageNode: 游戏配置已更新', config);
-  }
+  //   console.log('🔧 PixiStageNode: 游戏配置已更新', config);
+  // }
 
   /**
    * 节点执行逻辑 - 作为游戏的根容器
    */
   onExecute() {
-    try {
-      // 获取游戏应用实例
-      const app = this.gamePreview.getApp();
-      if (!app) {
-        console.warn('⚠️ PixiStageNode: 游戏应用未初始化');
-        return;
-      }
+    // 不再自动操作canvas或预览
+    // try {
+    //   // 获取游戏应用实例
+    //   const app = this.gamePreview.getApp();
+    //   if (!app) {
+    //     console.warn('⚠️ PixiStageNode: 游戏应用未初始化');
+    //     return;
+    //   }
 
-      // 处理UI层输入
-      const uiLayers = this.getInputData(0);
-      if (uiLayers) {
-        if (Array.isArray(uiLayers)) {
-          uiLayers.forEach(layer => {
-            if (layer) this.gamePreview.addToStage(layer);
-          });
-        } else {
-          this.gamePreview.addToStage(uiLayers);
-        }
-      }
+    //   // 处理UI层输入
+    //   const uiLayers = this.getInputData(0);
+    //   if (uiLayers) {
+    //     if (Array.isArray(uiLayers)) {
+    //       uiLayers.forEach(layer => {
+    //         if (layer) this.gamePreview.addToStage(layer);
+    //       });
+    //     } else {
+    //       this.gamePreview.addToStage(uiLayers);
+    //     }
+    //   }
 
-      // 处理游戏对象输入
-      const gameObjects = this.getInputData(1);
-      if (gameObjects) {
-        if (Array.isArray(gameObjects)) {
-          gameObjects.forEach(obj => {
-            if (obj) this.gamePreview.addToStage(obj);
-          });
-        } else {
-          this.gamePreview.addToStage(gameObjects);
-        }
-      }
+    //   // 处理游戏对象输入
+    //   const gameObjects = this.getInputData(1);
+    //   if (gameObjects) {
+    //     if (Array.isArray(gameObjects)) {
+    //       gameObjects.forEach(obj => {
+    //         if (obj) this.gamePreview.addToStage(obj);
+    //       });
+    //     } else {
+    //       this.gamePreview.addToStage(gameObjects);
+    //     }
+    //   }
 
-      // 输出游戏应用实例
-      this.setOutputData(0, app);
+    //   // 输出游戏应用实例
+    //   this.setOutputData(0, app);
       
-    } catch (error) {
-      console.error('❌ PixiStageNode: 执行出错', error);
-    }
+    // } catch (error) {
+    //   console.error('❌ PixiStageNode: 执行出错', error);
+    // }
   }
 
   /**
@@ -147,7 +143,7 @@ export class PixiStageNode extends BaseNode {
     console.log('🎮 PixiStageNode: 游戏舞台节点已添加');
     
     // 确保游戏预览管理器已初始化
-    this._initializeGamePreview();
+    // this._initializeGamePreview();
   }
 
   /**

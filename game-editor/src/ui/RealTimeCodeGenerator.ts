@@ -16,8 +16,8 @@ export class RealTimeCodeGenerator {
    */
   private analyzeNodeTypes(nodes: any[]): string[] {
     const types = new Set<string>();
-    nodes.forEach(node => {
-      if (node && node.type) {
+    nodes.forEach((node: any) => {
+      if (node.type) {
         types.add(node.type);
       }
     });
@@ -71,6 +71,181 @@ game.init();
 game.render();`;
     }
 
+    // 检查是否有Pixi Stage节点
+    const hasPixiStage = nodes.some((node: any) => node.type === 'pixi/scene/pixiStage');
+    
+    if (hasPixiStage) {
+      return this.generatePixiBasedGameCode(nodes, nodeCount, timestamp, nodeTypes);
+    }
+
+    return this.generateBasicGameCode(nodes, nodeCount, timestamp, nodeTypes);
+  }
+
+  /**
+   * 生成基于Pixi的游戏代码
+   */
+  private generatePixiBasedGameCode(nodes: any[], nodeCount: number, timestamp: string, nodeTypes: string[]): string {
+    const pixiStageNode = nodes.find(node => node.type === 'pixi/scene/pixiStage');
+    
+    return `/**
+ * 🎮 基于节点的Pixi游戏 - 游戏逻辑
+ * 自动生成时间: ${timestamp}
+ * 节点数量: ${nodeCount}
+ * 节点类型: ${nodeTypes.join(', ')}
+ * 设计尺寸: ${pixiStageNode?.properties?.width || 750} × ${pixiStageNode?.properties?.height || 1334}
+ */
+
+class NodeBasedGameLogic {
+  constructor(app) {
+    this.app = app;
+    this.stage = app.stage;
+    this.gameObjects = new Map();
+    this.gameState = {
+      score: 0,
+      level: 1,
+      isRunning: false,
+      nodeCount: ${nodeCount}
+    };
+    
+    console.log('🎯 初始化基于节点的游戏逻辑');
+    this.initializeNodes();
+  }
+
+  /**
+   * 初始化所有节点
+   */
+  initializeNodes() {
+${this.generatePixiNodeInitCode(nodes)}
+  }
+
+  /**
+   * 游戏逻辑更新
+   */
+  update(deltaTime) {
+    if (!this.gameState.isRunning) return;
+    
+${this.generatePixiNodeUpdateCode(nodes)}
+  }
+
+  /**
+   * 启动游戏
+   */
+  start() {
+    this.gameState.isRunning = true;
+    console.log('🚀 游戏逻辑开始运行');
+    
+    // 设置更新循环
+    this.app.ticker.add((delta) => {
+      this.update(delta);
+    });
+  }
+
+  /**
+   * 停止游戏
+   */
+  stop() {
+    this.gameState.isRunning = false;
+    console.log('⏹️ 游戏逻辑停止');
+  }
+
+  /**
+   * 获取游戏状态
+   */
+  getGameState() {
+    return { ...this.gameState };
+  }
+
+${this.generatePixiNodeMethods(nodes)}
+}
+
+// 导出游戏逻辑类
+window.NodeBasedGameLogic = NodeBasedGameLogic;`;
+  }
+
+  /**
+   * 生成Pixi节点初始化代码
+   */
+  private generatePixiNodeInitCode(nodes: any[]): string {
+    if (nodes.length === 0) {
+      return '    // 🔍 暂无节点，请在编辑器中添加节点';
+    }
+
+    const initCodeParts: string[] = [];
+    
+    for (const node of nodes) {
+      if (node.type === 'pixi/scene/pixiStage') {
+        const width = node.properties?.width || 750;
+        const height = node.properties?.height || 1334;
+        const background = node.properties?.background || '#1a1a1a';
+        
+        initCodeParts.push(`    // 初始化Pixi Stage节点
+    console.log('🎮 初始化游戏舞台:', ${width}x${height});
+    this.stage.width = ${width};
+    this.stage.height = ${height};
+    this.app.renderer.backgroundColor = ${background.includes('#') ? `'${background}'` : background};`);
+      } else {
+        initCodeParts.push(`    // 初始化节点: ${node.title || node.type}
+    console.log('🔧 设置节点:', '${node.title || node.type}');
+    this.init${this.sanitizeNodeName(node.title || node.type)}();`);
+      }
+    }
+
+    return initCodeParts.join('\n');
+  }
+
+  /**
+   * 生成Pixi节点更新代码
+   */
+  private generatePixiNodeUpdateCode(nodes: any[]): string {
+    if (nodes.length === 0) {
+      return '    // 🔍 暂无节点更新逻辑';
+    }
+
+    const updateCodeParts: string[] = [];
+    
+    for (const node of nodes) {
+      if (node.type !== 'pixi/scene/pixiStage') {
+        updateCodeParts.push(`    // 更新节点: ${node.title || node.type}
+    this.update${this.sanitizeNodeName(node.title || node.type)}();`);
+      }
+    }
+
+    return updateCodeParts.join('\n');
+  }
+
+  /**
+   * 生成Pixi节点方法
+   */
+  private generatePixiNodeMethods(nodes: any[]): string {
+    const methodParts: string[] = [];
+    
+    for (const node of nodes) {
+      if (node.type !== 'pixi/scene/pixiStage') {
+        const nodeName = this.sanitizeNodeName(node.title || node.type);
+        methodParts.push(`  /**
+   * 初始化${node.title || node.type}节点
+   */
+  init${nodeName}() {
+    console.log('🔧 初始化${node.title || node.type}节点');
+    // TODO: 实现${node.title || node.type}节点的初始化逻辑
+  }
+
+  /**
+   * 更新${node.title || node.type}节点
+   */
+  update${nodeName}() {
+    // TODO: 实现${node.title || node.type}节点的更新逻辑
+  }`);
+      }
+    }
+
+    return methodParts.join('\n\n');
+  }
+
+  /**
+   * 生成基础游戏代码（非Pixi）
+   */
+  private generateBasicGameCode(_nodes: any[], nodeCount: number, timestamp: string, nodeTypes: string[]): string {
     return `/**
  * 🎮 Hello World 游戏 - 游戏逻辑
  * 自动生成时间: ${timestamp}
@@ -220,7 +395,7 @@ ${this.generateUpdateCode()}
     // 绘制节点信息
     this.ctx.fillStyle = '#ecf0f1';
     this.ctx.font = '24px Arial';
-    this.ctx.fillText(\`节点数量: \${this.gameState.nodeCount}\`, width / 2, height * 0.55);
+    this.ctx.fillText(\`节点数量: \${this.gameState.nodeCount}\`, width / 2, height * 0.5);
     this.ctx.fillText(\`节点类型: \${this.gameState.nodeTypes.join(', ')}\`, width / 2, height * 0.6);
     
     // 绘制装饰元素
@@ -282,6 +457,58 @@ document.addEventListener('DOMContentLoaded', () => {
   // 将游戏实例暴露到全局，便于调试
   window.game = game;
 });`;
+  }
+
+  /**
+   * 生成节点设置代码
+   */
+  private generateNodeSetupCode(): string {
+    const nodes = (this.graph as any)._nodes || [];
+    
+    if (nodes.length === 0) {
+      return '    // 🔍 暂无节点，请在编辑器中添加节点';
+    }
+
+    const nodeSetupCode = nodes.map((node: any, index: number) => {
+      const nodeType = node.type || 'unknown';
+      const nodeTitle = node.title || `节点${index + 1}`;
+      
+      return `    // 节点 ${index + 1}: ${nodeTitle} (${nodeType})
+    console.log('🔧 设置节点:', '${nodeTitle}');
+    this.setup${this.sanitizeNodeName(nodeTitle)}();`;
+    }).join('\n');
+
+    return nodeSetupCode;
+  }
+
+  /**
+   * 生成更新代码
+   */
+  private generateUpdateCode(): string {
+    const nodes = (this.graph as any)._nodes || [];
+    
+    if (nodes.length === 0) {
+      return '    // 🔍 暂无节点更新逻辑';
+    }
+
+    const updateCode = nodes.map((node: any, index: number) => {
+      const nodeTitle = node.title || `节点${index + 1}`;
+      
+      return `    // 更新节点: ${nodeTitle}
+    this.update${this.sanitizeNodeName(nodeTitle)}();`;
+    }).join('\n');
+
+    return updateCode;
+  }
+
+  /**
+   * 清理节点名称，用于生成方法名
+   */
+  private sanitizeNodeName(name: string): string {
+    return name
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .replace(/^[0-9]/, '')
+      .replace(/^[a-z]/, (match) => match.toUpperCase());
   }
 
   /**
@@ -366,15 +593,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <p>节点数量: ${nodeCount}</p>
         </div>
         
-        <!-- 游戏画布将在这里动态创建 -->
-        
         <div class="controls">
-            <button onclick="window.game && window.game.handleKeyPress(' ')">切换消息</button>
-            <button onclick="console.log('游戏状态:', window.game?.gameState)">查看状态</button>
+            <button onclick="game?.start?.()">开始游戏</button>
+            <button onclick="game?.stop?.()">停止游戏</button>
+            <button onclick="location.reload()">重新加载</button>
         </div>
     </div>
     
-    <script src="main.js"></script>
+    <script src="logic.js"></script>
 </body>
 </html>`;
   }
@@ -530,54 +756,5 @@ window.GameRuntime = GameRuntime;
 window.gameRuntime = gameRuntime;
 
 console.log('🎮 Hello World 游戏运行时引擎已加载');`;
-  }
-
-  /**
-   * 生成节点设置代码
-   */
-  private generateNodeSetupCode(): string {
-    const nodes = (this.graph as any)._nodes || [];
-    
-    if (nodes.length === 0) {
-      return '    // 🔍 暂无节点，请在编辑器中添加节点';
-    }
-
-    const nodeSetupCode = nodes.map((node: any, index: number) => {
-      const nodeType = node.type || 'unknown';
-      const nodeTitle = node.title || `节点${index + 1}`;
-      
-      return `    // 节点 ${index + 1}: ${nodeTitle} (${nodeType})
-    console.log('🔧 设置节点:', '${nodeTitle}');
-    this.setup${this.sanitizeNodeName(nodeTitle)}();`;
-    }).join('\\n');
-
-    return nodeSetupCode;
-  }
-
-  /**
-   * 生成更新代码
-   */
-  private generateUpdateCode(): string {
-    const nodes = (this.graph as any)._nodes || [];
-    
-    if (nodes.length === 0) {
-      return '    // 🔍 暂无节点更新逻辑';
-    }
-
-    const updateCode = nodes.map((node: any, index: number) => {
-      const nodeTitle = node.title || `节点${index + 1}`;
-      
-      return `    // 更新节点: ${nodeTitle}
-    this.update${this.sanitizeNodeName(nodeTitle)}();`;
-    }).join('\\n');
-
-    return updateCode;
-  }
-
-  /**
-   * 清理节点名称
-   */
-  private sanitizeNodeName(name: string): string {
-    return name.replace(/[^a-zA-Z0-9]/g, '').replace(/^./, str => str.toUpperCase()) || 'Node';
   }
 }

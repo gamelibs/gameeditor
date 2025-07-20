@@ -146,7 +146,7 @@ export function registerPixiEventNode(LiteGraph: any) {
         // 对于每个连接的链接
         for (let i = 0; i < output.links.length; ++i) {
           const linkId = output.links[i];
-          const linkedNode = this.graph._nodes.find(n => n.inputs && n.inputs.some(input => 
+          const linkedNode = this.graph._nodes.find((n: any) => n.inputs && n.inputs.some((input: any) =>
             input.link === linkId
           ));
           

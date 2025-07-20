@@ -37,6 +37,14 @@ export class ThreeTabCodeGenerator {
    * 生成运行时引擎代码（第二个标签）
    * 展示gamecore.js游戏核心引擎代码
    */
+  generateRuntime(): string {
+    return this.generateRuntimeEngine();
+  }
+
+  /**
+   * 生成运行时引擎代码（第二个标签）
+   * 展示gamecore.js游戏核心引擎代码
+   */
   generateRuntimeEngine(): string {
     return `/**
  * 游戏核心引擎 - GameCore
@@ -721,64 +729,66 @@ window.NodeBasedGameLogic = NodeBasedGameLogic;`;
 
   /**
    * 生成PIXI游戏代码（有节点时）
+   * 暂时未使用，保留用于未来扩展
    */
-  private generatePixiGameCode(): string {
-    return `
-                // 创建游戏逻辑实例
-                const gameLogic = new NodeBasedGameLogic(app);
-                
-                // 创建基础UI
-                const uiContainer = new PIXI.Container();
-                app.stage.addChild(uiContainer);
-                
-                // 添加基础文本
-                const titleText = new PIXI.Text('节点游戏', {
-                    fontFamily: 'Arial',
-                    fontSize: 36,
-                    fill: 0xffffff,
-                    align: 'center'
-                });
-                titleText.x = app.screen.width / 2 - titleText.width / 2;
-                titleText.y = 50;
-                uiContainer.addChild(titleText);
-                
-                // 启动游戏逻辑
-                gameLogic.start();
-                
-                // 保存到全局
-                window.gameLogic = gameLogic;
-                window.pixiApp = app;`;
-  }
+  // private generatePixiGameCode(): string {
+  //   return `
+  //               // 创建游戏逻辑实例
+  //               const gameLogic = new NodeBasedGameLogic(app);
+  //
+  //               // 创建基础UI
+  //               const uiContainer = new PIXI.Container();
+  //               app.stage.addChild(uiContainer);
+  //
+  //               // 添加基础文本
+  //               const titleText = new PIXI.Text('节点游戏', {
+  //                   fontFamily: 'Arial',
+  //                   fontSize: 36,
+  //                   fill: 0xffffff,
+  //                   align: 'center'
+  //               });
+  //               titleText.x = app.screen.width / 2 - titleText.width / 2;
+  //               titleText.y = 50;
+  //               uiContainer.addChild(titleText);
+  //
+  //               // 启动游戏逻辑
+  //               gameLogic.start();
+  //
+  //               // 保存到全局
+  //               window.gameLogic = gameLogic;
+  //               window.pixiApp = app;`;
+  // }
 
   /**
    * 生成空游戏代码（无节点时）
+   * 暂时未使用，保留用于未来扩展
    */
-  private generateEmptyGameCode(): string {
-    return `
-                // 创建空白游戏状态
-                const emptyText = new PIXI.Text('等待添加节点...', {
-                    fontFamily: 'Arial',
-                    fontSize: 24,
-                    fill: 0xcccccc,
-                    align: 'center'
-                });
-                emptyText.x = app.screen.width / 2 - emptyText.width / 2;
-                emptyText.y = app.screen.height / 2 - emptyText.height / 2;
-                app.stage.addChild(emptyText);
-                
-                const hintText = new PIXI.Text('请在编辑器中添加节点来生成游戏', {
-                    fontFamily: 'Arial',
-                    fontSize: 16,
-                    fill: 0x999999,
-                    align: 'center'
-                });
-                hintText.x = app.screen.width / 2 - hintText.width / 2;
-                hintText.y = emptyText.y + 50;
-                app.stage.addChild(hintText);
-                
-                // 保存到全局
-                window.pixiApp = app;`;
-  }
+  // private generateEmptyGameCode(): string {
+  //   return `
+  //               // 创建空白游戏状态
+  //               const emptyText = new PIXI.Text('等待添加节点...', {
+  //                   fontFamily: 'Arial',
+  //                   fontSize: 24,
+  //                   fill: 0xcccccc,
+  //                   align: 'center'
+  //               });
+  //               emptyText.x = app.screen.width / 2 - emptyText.width / 2;
+  //               emptyText.y = app.screen.height / 2 - emptyText.height / 2;
+  //               app.stage.addChild(emptyText);
+  //
+  //               const hintText = new PIXI.Text('请在编辑器中添加节点来生成游戏', {
+  //                   fontFamily: 'Arial',
+  //                   fontSize: 16,
+  //                   fill: 0x999999,
+  //                   align: 'center'
+  //               });
+  //               hintText.x = app.screen.width / 2 - hintText.width / 2;
+  //               hintText.y = emptyText.y + 50;
+  //               app.stage.addChild(hintText);
+  //
+  //               // 保存到全局
+  //               window.pixiApp = app;`;
+  // }
 
   /**
    * 获取节点类型列表

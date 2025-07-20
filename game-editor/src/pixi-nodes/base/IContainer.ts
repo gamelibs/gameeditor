@@ -1,5 +1,4 @@
 import { Container } from 'pixi.js';
-import { ContainerLifecycleState } from './ContainerTypes';
 import type { ContainerLifecycleStateValues } from './ContainerTypes';
 
 /**

@@ -41,7 +41,7 @@ export class DeploymentGenerator {
   /**
    * 生成Netlify配置
    */
-  static generateNetlifyConfig(buildConfig: BuildConfig): string {
+  static generateNetlifyConfig(_buildConfig: BuildConfig): string {
     return `# Netlify配置文件
 [build]
   publish = "."
@@ -105,7 +105,7 @@ jobs:
   /**
    * 生成Docker配置
    */
-  static generateDockerfile(buildConfig: BuildConfig): string {
+  static generateDockerfile(_buildConfig: BuildConfig): string {
     return `FROM nginx:alpine
 
 # 复制游戏文件
@@ -122,7 +122,7 @@ CMD ["nginx", "-g", "daemon off;"]`;
   /**
    * 生成Nginx配置
    */
-  static generateNginxConfig(buildConfig: BuildConfig): string {
+  static generateNginxConfig(_buildConfig: BuildConfig): string {
     return `events {
     worker_connections 1024;
 }

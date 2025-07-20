@@ -148,14 +148,14 @@ export class PixiResourceManager {
                     Logger.debug('PixiResourceManager', `Blob image loaded: ${img.width}x${img.height}`);
                     resolveImg();
                   };
-                  img.onerror = (err) => {
+                  img.onerror = (_err) => {
                     rejectImg(new Error('Blob image loading failed'));
                   };
                   img.src = objectURL;
                 });
                 
                 // 现在创建纹理
-                res.instance = new Texture(blob);
+                res.instance = Texture.from(objectURL);
                 
                 // 验证纹理是否有效（不再依赖事件）
                 if (!res.instance.valid) {
