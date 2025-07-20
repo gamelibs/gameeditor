@@ -29,8 +29,19 @@ export class NodeLibraryPanel {
     
     // 3. 设置事件监听
     this.setupEventListeners();
-    
+
+    // 4. 确保初始状态正确
+    setTimeout(() => {
+      this.ensureClosedState();
+    }, 100);
+
     this.isInitialized = true;
+
+    // 添加全局调试方法
+    (window as any).debugNodeLibrary = () => {
+      console.log('🔍 节点库状态:', this.getStatus());
+      return this.getStatus();
+    };
   }
 
   /**
@@ -277,13 +288,23 @@ export class NodeLibraryPanel {
         .node-library-panel {
           top: 120px;
           left: -100%;
-          right: 10px;
-          width: auto;
+          width: calc(100vw - 20px);
           height: calc(100vh - 140px);
+          right: auto; /* 移除right属性，避免冲突 */
         }
 
         .node-library-panel.open {
           left: 10px;
+          right: 10px;
+        }
+      }
+
+      /* 确保默认状态是关闭的 */
+      @media (max-width: 768px) {
+        .node-library-panel:not(.open) {
+          left: -100% !important;
+          right: auto !important;
+          transform: translateX(0) !important;
         }
       }
     `;
@@ -295,9 +316,9 @@ export class NodeLibraryPanel {
    * 创建节点库面板
    */
   private createNodeLibraryPanel() {
-    // 创建面板容器
+    // 创建面板容器 - 确保默认是关闭状态
     const panel = document.createElement('div');
-    panel.className = 'node-library-panel';
+    panel.className = 'node-library-panel'; // 注意：不添加 'open' 类，确保默认关闭
     panel.id = 'node-library-panel';
 
     // 创建头部
@@ -326,9 +347,12 @@ export class NodeLibraryPanel {
 
     // 添加到页面
     document.body.appendChild(panel);
-    
+
     this.panelElement = panel;
-    
+
+    // 确保初始状态是关闭的
+    this.ensureClosedState();
+
     // 填充节点列表
     this.populateNodeList();
   }
@@ -649,9 +673,9 @@ export class NodeLibraryPanel {
    * 设置事件监听
    */
   private setupEventListeners() {
-    // 监听节点库显示事件
+    // 监听节点库显示事件 - 改为切换逻辑
     this.eventBus.on('node-library:show', () => {
-      this.show();
+      this.toggle();
     });
 
     // 点击外部关闭
@@ -659,9 +683,21 @@ export class NodeLibraryPanel {
       const target = e.target as HTMLElement;
       const isInPanel = target.closest('.node-library-panel');
       const isToolbarBtn = target.closest('.toolbar-btn');
-      
+
       if (!isInPanel && !isToolbarBtn && this.panelElement?.classList.contains('open')) {
         this.hide();
+      }
+    });
+
+    // 监听窗口大小变化，确保移动端状态正确
+    window.addEventListener('resize', () => {
+      if (this.panelElement && !this.panelElement.classList.contains('open')) {
+        // 如果面板是关闭状态，确保在移动端位置正确
+        if (window.innerWidth <= 768) {
+          this.panelElement.style.left = '-100%';
+        } else {
+          this.panelElement.style.left = '-320px';
+        }
       }
     });
   }
@@ -681,8 +717,14 @@ export class NodeLibraryPanel {
   show() {
     if (this.panelElement) {
       this.panelElement.classList.add('open');
+
+      // 清除内联样式，让CSS类生效
+      this.panelElement.style.left = '';
+      this.panelElement.style.right = '';
+
       // 刷新节点列表
       this.populateNodeList();
+      console.log('📚 节点库已显示');
     }
   }
 
@@ -692,6 +734,33 @@ export class NodeLibraryPanel {
   hide() {
     if (this.panelElement) {
       this.panelElement.classList.remove('open');
+
+      // 强制设置样式，确保完全隐藏
+      if (window.innerWidth <= 768) {
+        // 移动端
+        this.panelElement.style.left = '-100%';
+        this.panelElement.style.right = 'auto';
+      } else {
+        // 桌面端
+        this.panelElement.style.left = '-320px';
+        this.panelElement.style.right = 'auto';
+      }
+
+      console.log('📚 节点库已隐藏');
+    }
+  }
+
+  /**
+   * 切换节点库显示状态
+   */
+  toggle() {
+    if (this.panelElement) {
+      const isOpen = this.panelElement.classList.contains('open');
+      if (isOpen) {
+        this.hide();
+      } else {
+        this.show();
+      }
     }
   }
 
@@ -720,12 +789,41 @@ export class NodeLibraryPanel {
   }
 
   /**
+   * 确保节点库处于关闭状态
+   */
+  private ensureClosedState() {
+    if (this.panelElement) {
+      // 强制移除 open 类，确保关闭状态
+      this.panelElement.classList.remove('open');
+
+      // 强制设置样式，确保完全隐藏
+      if (window.innerWidth <= 768) {
+        // 移动端
+        this.panelElement.style.left = '-100%';
+        this.panelElement.style.right = 'auto';
+        this.panelElement.style.transform = 'translateX(0)';
+      } else {
+        // 桌面端
+        this.panelElement.style.left = '-320px';
+        this.panelElement.style.right = 'auto';
+      }
+
+      console.log('🔒 节点库已确保关闭状态 (屏幕宽度:', window.innerWidth + ')');
+    }
+  }
+
+  /**
    * 获取节点库状态 - 用于调试
    */
   getStatus() {
+    const computedStyle = this.panelElement ? window.getComputedStyle(this.panelElement) : null;
     return {
       isInitialized: this.isInitialized,
       isVisible: this.panelElement?.classList.contains('open') || false,
+      hasOpenClass: this.panelElement?.classList.contains('open'),
+      computedLeft: computedStyle?.left,
+      inlineLeft: this.panelElement?.style.left,
+      screenWidth: window.innerWidth,
       expandedCategories: Array.from(this.expandedCategories),
       expandedSubcategories: Array.from(this.expandedSubcategories),
       registeredNodeCount: Object.keys(LiteGraph.registered_node_types || {}).length

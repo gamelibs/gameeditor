@@ -237,11 +237,11 @@ export class EditorToolbarPanel {
   }
 
   /**
-   * 显示节点库
+   * 切换节点库显示状态
    */
   private showNodeLibrary() {
     this.eventBus.emit('node-library:show');
-    console.log('📚 显示节点库');
+    console.log('📚 切换节点库');
   }
 
   /**
