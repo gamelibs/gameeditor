@@ -39,16 +39,21 @@ export class TopbarPanel extends BasePanel {
     const style = document.createElement('style');
     style.id = 'topbar-styles';
     style.textContent = `
-      /* TopbarPanel 专属样式 */
+      /* TopbarPanel 专属样式 - 最高优先级保护 */
       #topbar {
-        min-height: 50px;
-        background: var(--panel-bg);
-        border-bottom: 1px solid var(--border-color);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 15px;
-        position: relative;
+        min-height: 50px !important;
+        background: var(--panel-bg) !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 0 15px !important;
+        position: relative !important;
+        z-index: 1000 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
       }
 
       .topbar-title {

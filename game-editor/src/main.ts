@@ -1,6 +1,7 @@
 import { EditorCore } from './core/EditorCore';
 import { EventBus } from './core/EventBus';
 import { UIManager } from './ui/UIManager';
+import { ZIndexManager } from './utils/ZIndexManager';
 import 'litegraph.js/css/litegraph.css';
 
 /**
@@ -75,41 +76,55 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     console.log('🚀 开始初始化游戏编辑器...');
 
-    // 1. 设置基础样式
+    // 1. 初始化Z-Index管理器
+    ZIndexManager.initialize();
+    console.log('✅ Z-Index管理器初始化完成');
+
+    // 2. 设置基础样式
     setupBaseStyles();
     console.log('✅ 基础样式设置完成');
 
-    // 2. 验证DOM结构
+    // 3. 验证DOM结构
     validateDOMElements();
     console.log('✅ DOM结构验证完成');
 
-    // 3. 初始化全局事件总线
+    // 4. 初始化全局事件总线
     const eventBus = new EventBus();
     console.log('✅ 事件总线初始化完成');
 
-    // 4. 初始化UI管理器（创建编辑器容器）
+    // 5. 初始化UI管理器（创建编辑器容器）
     const uiManager = new UIManager(eventBus);
     await uiManager.initialize();
     console.log('✅ UI管理器初始化完成');
 
-    // 5. 初始化LiteGraph编辑器核心
+    // 6. 初始化LiteGraph编辑器核心
     const editorCore = new EditorCore(eventBus);
     console.log('✅ LiteGraph编辑器核心初始化完成');
 
-    // 6. 连接编辑器核心与UI管理器
+    // 7. 连接编辑器核心与UI管理器
     uiManager.connectEditorCore(editorCore);
     console.log('✅ 编辑器核心与UI连接完成');
 
-    // 7. 启动应用程序
+    // 8. 启动应用程序
     await startApplication(eventBus, editorCore, uiManager);
 
     console.log('🎉 游戏编辑器启动完成！');
+
+    // 添加topbar监控器
+    setupTopbarMonitor();
+
+    // 最终验证z-index层级
+    setTimeout(() => {
+      ZIndexManager.validateZIndexLayers();
+      ZIndexManager.fixTopbarVisibility();
+    }, 1000);
 
     // 暴露到全局供调试使用
     (window as any).editor = {
       eventBus,
       editorCore,
-      uiManager
+      uiManager,
+      ZIndexManager
     };
 
   } catch (error) {
@@ -148,6 +163,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.body.appendChild(errorDiv);
   }
 });
+
+/**
+ * 设置topbar监控器 - 检测topbar被意外修改
+ */
+function setupTopbarMonitor() {
+  const topbar = document.getElementById('topbar');
+  if (!topbar) {
+    console.error('❌ Topbar元素不存在，无法设置监控器');
+    return;
+  }
+
+  // 使用MutationObserver监控topbar的变化
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes') {
+        const target = mutation.target as HTMLElement;
+        const computedStyle = window.getComputedStyle(target);
+
+        // 检查关键样式属性
+        if (computedStyle.display === 'none' ||
+            computedStyle.visibility === 'hidden' ||
+            computedStyle.opacity === '0') {
+          console.error('🚨 Topbar被隐藏!', {
+            attributeName: mutation.attributeName,
+            oldValue: mutation.oldValue,
+            newValue: target.getAttribute(mutation.attributeName || ''),
+            display: computedStyle.display,
+            visibility: computedStyle.visibility,
+            opacity: computedStyle.opacity,
+            stackTrace: new Error().stack
+          });
+        }
+      }
+
+      if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
+        console.warn('🚨 Topbar子元素被移除!', {
+          removedNodes: Array.from(mutation.removedNodes).map(n => n.nodeName),
+          stackTrace: new Error().stack
+        });
+      }
+    });
+  });
+
+  // 监控属性和子元素变化
+  observer.observe(topbar, {
+    attributes: true,
+    attributeOldValue: true,
+    childList: true,
+    subtree: true
+  });
+
+  console.log('🔍 Topbar监控器已启动');
+}
 
 /**
  * 启动应用程序

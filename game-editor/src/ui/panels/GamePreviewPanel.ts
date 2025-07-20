@@ -1,26 +1,44 @@
 import { BasePanel } from './BasePanel';
 import { EventBus } from '../../core/EventBus';
+import { EditorCore } from '../../core/EditorCore';
 
 /**
- * 游戏预览面板 - 管理游戏预览和控制
+ * 游戏预览面板 - 右侧浮动预览窗口
+ * 设计原则：
+ * 1. 完全独立的定位，不影响现有布局
+ * 2. 使用最高z-index层级，确保在最上层
+ * 3. 可拖拽、可调整大小、可最小化
+ * 4. 响应式适配，移动端自动调整
  */
 export class GamePreviewPanel extends BasePanel {
-  private iframe: HTMLIFrameElement | null = null;
-  private scaleInfo: HTMLElement | null = null;
+  private editorCore: EditorCore | null = null;
+  private previewIframe: HTMLIFrameElement | null = null;
+  private floatingPanel: HTMLElement | null = null;
+  private isDragging = false;
+  private isResizing = false;
+  private dragOffset = { x: 0, y: 0 };
+  private isMinimized = false;
+  private lastPosition = { x: 0, y: 0, width: 400, height: 600 };
 
   constructor(eventBus: EventBus) {
+    // 使用现有的面板元素作为基础，但创建独立的浮动面板
     super(eventBus, 'game-preview-panel');
   }
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
-    this.setupGamePreview();
-    this.setupControlButtons();
-    this.setupScaleInfo();
-    this.setupEventListeners();
-    
+    // 1. 注入样式
+    this.injectFloatingStyles();
+
+    // 2. 创建浮动预览面板
+    this.createFloatingPreviewPanel();
+
+    // 3. 设置事件监听
+    this.setupFloatingEventListeners();
+
     this.isInitialized = true;
+    console.log('✅ 浮动游戏预览面板初始化完成');
   }
 
   private setupGamePreview() {

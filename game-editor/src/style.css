@@ -30,14 +30,31 @@ body, html {
   --active-bg: rgba(255, 255, 255, 0.2);
 }
 
-/* 最小化的LiteGraph保护 - 只保护关键功能 */
+/* 完整的LiteGraph保护 - 确保不与其他组件冲突 */
 .lgraphcontextmenu,
-.litecontextmenu {
-  z-index: 9999 !important;
+.litecontextmenu,
+.litegraph-contextmenu {
+  z-index: 10001 !important;
   position: fixed !important;
+  background: rgba(40, 40, 40, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid #555 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
 }
 
 .litegraph-searchbox {
-  z-index: 9998 !important;
+  z-index: 10002 !important;
   position: fixed !important;
+  background: rgba(40, 40, 40, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid #555 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* 确保topbar始终在正确的层级 */
+#topbar {
+  z-index: 1000 !important;
+  position: relative !important;
 }

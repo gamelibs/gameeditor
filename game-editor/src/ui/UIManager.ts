@@ -5,6 +5,8 @@ import { TopbarPanel } from './panels/TopbarPanel';
 import { NodeEditorPanel } from './panels/NodeEditorPanel';
 import { EditorToolbarPanel } from './panels/EditorToolbarPanel';
 import { NodeLibraryPanel } from './panels/NodeLibraryPanel';
+import { FloatingGamePreview } from './panels/FloatingGamePreview';
+import { FloatingPreviewButton } from './components/FloatingPreviewButton';
 
 /**
  * 稳定的UI管理器 - 使用固定定位确保布局稳定性
@@ -15,6 +17,8 @@ export class UIManager {
   private panels = new Map<string, any>();
   private isInitialized = false;
   private codeGenerator: ThreeTabCodeGenerator | null = null;
+  private floatingGamePreview: FloatingGamePreview | null = null;
+  private floatingPreviewButton: FloatingPreviewButton | null = null;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -44,7 +48,15 @@ export class UIManager {
         console.log(`✅ ${name} 面板初始化完成`);
       }
 
-      // 5. 设置面板通信
+      // 5. 初始化浮动游戏预览组件
+      this.floatingGamePreview = new FloatingGamePreview(this.eventBus);
+      await this.floatingGamePreview.initialize();
+
+      // 6. 初始化浮动预览按钮
+      this.floatingPreviewButton = new FloatingPreviewButton(this.eventBus);
+      await this.floatingPreviewButton.initialize();
+
+      // 7. 设置面板通信
       this.setupPanelCommunication();
 
       this.isInitialized = true;
@@ -115,9 +127,15 @@ export class UIManager {
       console.log('✅ 节点库连接完成');
     }
 
+    // 连接浮动游戏预览
+    if (this.floatingGamePreview) {
+      this.floatingGamePreview.connectEditorCore(editorCore);
+      console.log('✅ 浮动游戏预览连接完成');
+    }
+
     // 创建代码生成器
     this.codeGenerator = new ThreeTabCodeGenerator(editorCore.graph);
-    
+
     console.log('✅ 编辑器核心连接完成');
   }
 

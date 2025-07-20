@@ -651,21 +651,53 @@ export class NodeLibraryPanel {
    */
   private addNodeToGraph(nodeType: string) {
     if (!this.editorCore || !this.editorCore.canvas) return;
-    
+
+    console.log('🔍 添加节点前 - 检查topbar状态');
+    this.debugTopbarState('before-add-node');
+
     // 在画布中心添加节点
     const canvasRect = this.editorCore.canvasElement?.getBoundingClientRect();
     const centerX = canvasRect ? canvasRect.width / 2 : 400;
     const centerY = canvasRect ? canvasRect.height / 2 : 300;
-    
+
     const node = LiteGraph.createNode(nodeType);
     if (node) {
       node.pos = [centerX, centerY];
       this.editorCore.graph.add(node);
-      
+
+      console.log('🔍 添加节点后 - 检查topbar状态');
+      this.debugTopbarState('after-add-node');
+
       // 关闭节点库
       this.hide();
-      
+
       console.log(`✅ 添加节点: ${nodeType}`);
+    }
+  }
+
+  /**
+   * 调试topbar状态
+   */
+  private debugTopbarState(context: string) {
+    const topbar = document.getElementById('topbar');
+    if (topbar) {
+      const computedStyle = window.getComputedStyle(topbar);
+      console.log(`🔍 [${context}] Topbar状态:`, {
+        display: computedStyle.display,
+        visibility: computedStyle.visibility,
+        opacity: computedStyle.opacity,
+        zIndex: computedStyle.zIndex,
+        position: computedStyle.position,
+        top: computedStyle.top,
+        left: computedStyle.left,
+        width: computedStyle.width,
+        height: computedStyle.height,
+        transform: computedStyle.transform,
+        classList: Array.from(topbar.classList),
+        innerHTML: topbar.innerHTML.length > 0 ? '有内容' : '无内容'
+      });
+    } else {
+      console.error(`🔍 [${context}] Topbar元素不存在!`);
     }
   }
 
