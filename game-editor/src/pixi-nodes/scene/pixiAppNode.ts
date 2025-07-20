@@ -111,15 +111,26 @@ export function registerPixiAppNode(LiteGraph: any) {
       this.graph.onNodeChanged(this);
     }
 
+    // 获取当前游戏数据
+    const gameData = this.getOutputData(0);
+
+    Logger.info('PixiAppNode', '触发代码生成', {
+      nodeId: this.id,
+      properties: this.properties,
+      gameData: gameData
+    });
+
     // 发送事件给UI系统
     const event = new CustomEvent('pixi-app-node-changed', {
       detail: {
         nodeId: this.id,
         properties: this.properties,
-        gameData: this.getOutputData(0)
+        gameData: gameData
       }
     });
     document.dispatchEvent(event);
+
+    Logger.info('PixiAppNode', '代码生成事件已发送');
   };
 
   PixiAppNode.prototype.onAdded = function() {

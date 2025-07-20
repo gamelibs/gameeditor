@@ -295,6 +295,7 @@ export class CodePreviewPanel {
 
     // 监听PixiAppNode数据变化
     document.addEventListener('pixi-app-node-changed', (e: any) => {
+      console.log('📝 CodePreviewPanel 接收到事件:', e.detail);
       this.updateGameData(e.detail);
     });
   }
@@ -375,141 +376,89 @@ export class CodePreviewPanel {
   }
 
   /**
-   * 生成代码
+   * 加载并显示代码
    */
   private generateCode() {
-    if (!this.gameData) return;
+    console.log('📝 加载代码文件，当前tab:', this.currentTab);
 
     switch (this.currentTab) {
       case 'index':
-        this.generateIndexHtml();
+        this.loadIndexHtml();
         break;
       case 'gamecore':
-        this.generateGameCore();
+        this.loadGameCore();
         break;
       case 'logic':
-        this.generateLogic();
+        this.loadLogic();
         break;
     }
   }
 
   /**
-   * 生成index.html代码
+   * 加载index.html文件
    */
-  private generateIndexHtml() {
-    const code = `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${this.gameData?.properties?.title || 'My Game'}</title>
-    <style>
-        body { margin: 0; padding: 0; background: ${this.gameData?.properties?.background || '#1a1a1a'}; }
-        #game-container { width: 100vw; height: 100vh; }
-    </style>
-</head>
-<body>
-    <div id="game-container"></div>
-    <script src="https://pixijs.download/release/pixi.min.js"></script>
-    <script src="./gamecore.js"></script>
-    <script src="./logic.js"></script>
-    <script src="./main.js"></script>
-</body>
-</html>`;
-
-    this.updateCodeDisplay('code-index', code);
-  }
-
-  /**
-   * 生成gamecore.js代码
-   */
-  private generateGameCore() {
-    const code = `// 游戏核心引擎
-class GameCore {
-    constructor() {
-        this.app = null;
-        this.config = {
-            width: ${this.gameData?.properties?.width || 750},
-            height: ${this.gameData?.properties?.height || 1334},
-            background: '${this.gameData?.properties?.background || '#1a1a1a'}'
-        };
-    }
-
-    async init() {
-        this.app = new PIXI.Application();
-        await this.app.init(this.config);
-
-        const container = document.getElementById('game-container');
-        if (container) {
-            container.appendChild(this.app.canvas);
-        }
-
-        return this.app;
-    }
-
-    addChild(child) {
-        if (this.app && child) {
-            this.app.stage.addChild(child);
-        }
-    }
-}
-
-window.gameCore = new GameCore();`;
-
-    this.updateCodeDisplay('code-gamecore', code);
-  }
-
-  /**
-   * 生成logic.js代码
-   */
-  private generateLogic() {
-    const children = this.gameData?.children || [];
-
-    let logicCode = `// 游戏逻辑代码
-class GameLogic {
-    constructor(gameCore) {
-        this.gameCore = gameCore;
-        this.objects = [];
-    }
-
-    async init() {
-        console.log('🎯 游戏逻辑初始化开始');
-
-        ${this.generateObjectCreationCode(children)}
-
-        console.log('✅ 游戏逻辑初始化完成');
-    }
-}
-
-window.gameLogic = new GameLogic(window.gameCore);`;
-
-    this.updateCodeDisplay('code-logic', logicCode);
-  }
-
-  /**
-   * 生成对象创建代码
-   */
-  private generateObjectCreationCode(children: any[]): string {
-    if (!children || children.length === 0) {
-      return '// 暂无游戏对象';
-    }
-
-    return children.map((child, index) => {
-      if (child.nodeType === 'text') {
-        return `// 文本对象 ${index + 1}
-        const text${index + 1} = new PIXI.Text('${child.text || 'Hello World'}', {
-            fontSize: ${child.style?.fontSize || 48},
-            fill: '${child.style?.fill || '#FFFFFF'}'
-        });
-        text${index + 1}.x = ${child.x || 375};
-        text${index + 1}.y = ${child.y || 667};
-        text${index + 1}.anchor.set(0.5);
-        this.gameCore.addChild(text${index + 1});`;
+  private async loadIndexHtml() {
+    try {
+      console.log('📝 加载 build/index.html');
+      const response = await fetch('./build/index.html');
+      if (response.ok) {
+        const code = await response.text();
+        this.updateCodeDisplay('code-index', code);
+        console.log('✅ index.html 加载成功');
       } else {
-        return `// TODO: ${child.nodeType || child.type} 对象`;
+        throw new Error(`HTTP ${response.status}`);
       }
-    }).join('\n\n        ');
+    } catch (error) {
+      console.error('❌ 加载 index.html 失败:', error);
+      this.updateCodeDisplay('code-index', `<!-- 加载失败: ${error} -->\n<!-- 请确保 build/index.html 文件存在 -->`);
+    }
   }
+
+  /**
+   * 加载gamecore.js文件
+   */
+  private async loadGameCore() {
+    try {
+      console.log('📝 加载 build/gamecore.js');
+      const response = await fetch('./build/gamecore.js');
+      if (response.ok) {
+        const code = await response.text();
+        this.updateCodeDisplay('code-gamecore', code);
+        console.log('✅ gamecore.js 加载成功');
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error('❌ 加载 gamecore.js 失败:', error);
+      this.updateCodeDisplay('code-gamecore', `// 加载失败: ${error}\n// 请确保 build/gamecore.js 文件存在`);
+    }
+  }
+
+  /**
+   * 加载logic.js文件
+   */
+  private async loadLogic() {
+    try {
+      console.log('📝 加载 build/logic.js');
+      const response = await fetch('./build/logic.js');
+      if (response.ok) {
+        const code = await response.text();
+        this.updateCodeDisplay('code-logic', code);
+        console.log('✅ logic.js 加载成功');
+      } else {
+        throw new Error(`HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error('❌ 加载 logic.js 失败:', error);
+      this.updateCodeDisplay('code-logic', `// 加载失败: ${error}\n// 请确保 build/logic.js 文件存在`);
+    }
+  }
+
+
+
+
+
+
 
   /**
    * 更新代码显示
