@@ -329,14 +329,20 @@ export class TopbarPanel extends BasePanel {
     
     runBtn.onclick = () => {
       if (!this.editorCore) return;
-      
+
       if (!this.isRunning) {
+        // 获取图表数据
         const graphData = this.editorCore.graph.serialize();
         localStorage.setItem('game-editor-graph', JSON.stringify(graphData));
+
+        // 启动图表执行
         this.editorCore.graph.runStep();
         runBtn.textContent = 'stop';
         this.isRunning = true;
-        
+
+        // 触发代码生成和传输
+        this.generateAndTransferCode(graphData);
+
         this.eventBus.emit('graph:run', { data: graphData });
       } else {
         window.location.reload();
@@ -345,7 +351,173 @@ export class TopbarPanel extends BasePanel {
     container.appendChild(runBtn);
   }
 
+  /**
+   * 生成代码并传输到build/main.js
+   */
+  private async generateAndTransferCode(graphData: any) {
+    try {
+      console.log('🚀 开始代码生成和传输...');
 
+      // 1. 分析图表数据，提取PixiAppNode
+      const pixiAppNodes = this.findPixiAppNodes(graphData);
+      if (pixiAppNodes.length === 0) {
+        console.warn('⚠️ 未找到PixiAppNode，无法生成代码');
+        return;
+      }
+
+      // 2. 收集所有连接的节点数据
+      const gameData = this.collectGameData(graphData, pixiAppNodes[0]);
+
+      // 3. 生成代码
+      const generatedCode = this.generateMainJs(gameData);
+
+      // 4. 传输到build/main.js
+      await this.transferCodeToBuild(generatedCode);
+
+      console.log('✅ 代码生成和传输完成');
+
+      // 5. 通知UI更新
+      this.eventBus.emit('code:generated', { gameData, code: generatedCode });
+
+    } catch (error) {
+      console.error('❌ 代码生成失败:', error);
+    }
+  }
+
+  /**
+   * 查找PixiAppNode
+   */
+  private findPixiAppNodes(graphData: any): any[] {
+    if (!graphData.nodes) return [];
+
+    return graphData.nodes.filter((node: any) =>
+      node.type === 'scene/PixiApp' || node.title?.includes('Pixi App')
+    );
+  }
+
+  /**
+   * 收集游戏数据
+   */
+  private collectGameData(graphData: any, pixiAppNode: any): any {
+    const gameData = {
+      config: {
+        width: pixiAppNode.properties?.width || 750,
+        height: pixiAppNode.properties?.height || 1334,
+        background: pixiAppNode.properties?.background || '#1a1a1a',
+        title: pixiAppNode.properties?.title || 'My Game'
+      },
+      children: [] as any[],
+      timestamp: Date.now()
+    };
+
+    // 查找连接到PixiAppNode的子节点
+    if (graphData.links) {
+      const connectedLinks = graphData.links.filter((link: any) =>
+        link.target_id === pixiAppNode.id && link.target_slot === 0
+      );
+
+      connectedLinks.forEach((link: any) => {
+        const sourceNode = graphData.nodes.find((node: any) => node.id === link.origin_id);
+        if (sourceNode) {
+          gameData.children.push(this.serializeNode(sourceNode));
+        }
+      });
+    }
+
+    return gameData;
+  }
+
+  /**
+   * 序列化节点数据
+   */
+  private serializeNode(node: any): any {
+    const serialized: any = {
+      type: node.type,
+      title: node.title,
+      properties: node.properties || {},
+      x: node.pos?.[0] || 0,
+      y: node.pos?.[1] || 0
+    };
+
+    // 根据节点类型添加特殊处理
+    if (node.type === 'render/text') {
+      serialized.nodeType = 'text';
+      serialized.text = node.properties?.text || 'Hello World';
+      serialized.style = {
+        fontSize: node.properties?.fontSize || 48,
+        fill: node.properties?.textColor || '#FFFFFF',
+        fontFamily: node.properties?.fontFamily || 'Arial'
+      };
+    }
+
+    return serialized;
+  }
+
+  /**
+   * 生成main.js代码
+   */
+  private generateMainJs(gameData: any): string {
+    return `// 自动生成的游戏代码 - main.js
+// 生成时间: ${new Date().toLocaleString()}
+
+// 游戏数据
+const gameData = ${JSON.stringify(gameData, null, 2)};
+
+// 主函数
+async function main() {
+    console.log('🎮 游戏启动中...', gameData);
+
+    try {
+        // 初始化游戏核心
+        await window.gameCore.init();
+
+        // 初始化游戏逻辑
+        await window.gameLogic.init();
+
+        console.log('✅ 游戏启动完成');
+    } catch (error) {
+        console.error('❌ 游戏启动失败:', error);
+    }
+}
+
+// 页面加载完成后启动游戏
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', main);
+} else {
+    main();
+}
+
+// 导出游戏数据供其他模块使用
+window.gameData = gameData;
+`;
+  }
+
+  /**
+   * 传输代码到build目录
+   */
+  private async transferCodeToBuild(code: string): Promise<void> {
+    try {
+      // 这里应该调用后端API来写入文件
+      // 暂时使用localStorage模拟
+      localStorage.setItem('generated-main-js', code);
+
+      console.log('📝 代码已保存到localStorage (模拟build/main.js)');
+
+      // TODO: 实现真实的文件写入
+      // await fetch('/api/write-file', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({
+      //     path: 'build/main.js',
+      //     content: code
+      //   })
+      // });
+
+    } catch (error) {
+      console.error('❌ 代码传输失败:', error);
+      throw error;
+    }
+  }
 
   /**
    * 创建案例按钮

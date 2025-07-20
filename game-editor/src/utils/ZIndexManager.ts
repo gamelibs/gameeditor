@@ -243,12 +243,12 @@ export class ZIndexManager {
         if (mutation.type === 'attributes') {
           const target = mutation.target as HTMLElement;
           const computedStyle = window.getComputedStyle(target);
-          
+
           // 检查是否被意外隐藏
-          if (computedStyle.display === 'none' || 
-              computedStyle.visibility === 'hidden' || 
+          if (computedStyle.display === 'none' ||
+              computedStyle.visibility === 'hidden' ||
               computedStyle.opacity === '0') {
-            console.error('🚨 Topbar被意外隐藏，正在修复...');
+            console.warn('🔧 Topbar可见性异常，自动修复中...');
             this.fixTopbarVisibility();
           }
         }
@@ -258,10 +258,10 @@ export class ZIndexManager {
     observer.observe(topbar, {
       attributes: true,
       attributeFilter: ['style', 'class'],
-      subtree: true
+      subtree: false // 减少监控范围
     });
 
-    console.log('🔍 Topbar状态监控已启动');
+    console.log('🔍 Topbar状态监控已启动 (轻量模式)');
   }
 
   /**

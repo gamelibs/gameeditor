@@ -7,6 +7,7 @@ import { EditorToolbarPanel } from './panels/EditorToolbarPanel';
 import { NodeLibraryPanel } from './panels/NodeLibraryPanel';
 import { FloatingGamePreview } from './panels/FloatingGamePreview';
 import { FloatingPreviewButton } from './components/FloatingPreviewButton';
+import { CodePreviewPanel } from './panels/CodePreviewPanel';
 
 /**
  * 稳定的UI管理器 - 使用固定定位确保布局稳定性
@@ -19,6 +20,7 @@ export class UIManager {
   private codeGenerator: ThreeTabCodeGenerator | null = null;
   private floatingGamePreview: FloatingGamePreview | null = null;
   private floatingPreviewButton: FloatingPreviewButton | null = null;
+  private codePreviewPanel: CodePreviewPanel | null = null;
 
   constructor(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -56,7 +58,10 @@ export class UIManager {
       this.floatingPreviewButton = new FloatingPreviewButton(this.eventBus);
       await this.floatingPreviewButton.initialize();
 
-      // 7. 设置面板通信
+      // 7. 初始化代码预览面板
+      this.codePreviewPanel = new CodePreviewPanel(this.eventBus);
+
+      // 8. 设置面板通信
       this.setupPanelCommunication();
 
       this.isInitialized = true;

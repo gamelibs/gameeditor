@@ -64,6 +64,12 @@ export class FloatingPreviewButton {
         pointer-events: auto;
       }
 
+      .floating-preview-btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
       .floating-preview-btn {
         width: 48px !important;
         height: 48px !important;
@@ -95,6 +101,21 @@ export class FloatingPreviewButton {
       .floating-preview-btn:active {
         transform: scale(0.95) !important;
         box-shadow: 0 2px 8px rgba(78, 205, 196, 0.8) !important;
+      }
+
+      /* 代码预览按钮特殊样式 */
+      .code-preview-btn {
+        background: linear-gradient(135deg, #FF6B6B, #FF8E53) !important;
+      }
+
+      .code-preview-btn:hover {
+        background: linear-gradient(135deg, #FF5252, #FF7043) !important;
+        box-shadow: 0 4px 16px rgba(255, 107, 107, 0.4) !important;
+      }
+
+      .code-preview-btn:active {
+        transform: scale(0.95) !important;
+        box-shadow: 0 2px 8px rgba(255, 107, 107, 0.8) !important;
       }
 
       .floating-preview-btn.active {
@@ -241,28 +262,50 @@ export class FloatingPreviewButton {
   }
 
   /**
-   * 创建预览按钮
+   * 创建预览按钮组
    */
   private createPreviewButton(): HTMLElement {
-    const button = document.createElement('button');
-    button.className = 'floating-preview-btn';
-    button.id = 'floating-preview-btn';
-    button.setAttribute('data-tooltip', '打开游戏预览');
-    
-    // 按钮内容
-    button.innerHTML = `
+    const buttonGroup = document.createElement('div');
+    buttonGroup.className = 'floating-preview-btn-group';
+
+    // 游戏预览按钮
+    const gamePreviewBtn = document.createElement('button');
+    gamePreviewBtn.className = 'floating-preview-btn';
+    gamePreviewBtn.id = 'floating-preview-btn';
+    gamePreviewBtn.setAttribute('data-tooltip', '打开游戏预览');
+
+    gamePreviewBtn.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center;">
         <div style="font-size: 20px;">🎮</div>
         <div class="floating-preview-btn-text">预览</div>
       </div>
     `;
 
-    // 点击事件
-    button.onclick = () => {
+    gamePreviewBtn.onclick = () => {
       this.togglePreview();
     };
 
-    return button;
+    // 代码预览按钮
+    const codePreviewBtn = document.createElement('button');
+    codePreviewBtn.className = 'floating-preview-btn code-preview-btn';
+    codePreviewBtn.id = 'floating-code-preview-btn';
+    codePreviewBtn.setAttribute('data-tooltip', '查看生成代码');
+
+    codePreviewBtn.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <div style="font-size: 20px;">📝</div>
+        <div class="floating-preview-btn-text">代码</div>
+      </div>
+    `;
+
+    codePreviewBtn.onclick = () => {
+      this.toggleCodePreview();
+    };
+
+    buttonGroup.appendChild(gamePreviewBtn);
+    buttonGroup.appendChild(codePreviewBtn);
+
+    return buttonGroup;
   }
 
   /**
@@ -289,9 +332,25 @@ export class FloatingPreviewButton {
    */
   private togglePreview() {
     this.eventBus.emit('floating-preview:toggle');
-    
+
     // 添加点击反馈
     const button = document.getElementById('floating-preview-btn');
+    if (button) {
+      button.classList.add('pulse');
+      setTimeout(() => {
+        button.classList.remove('pulse');
+      }, 1000);
+    }
+  }
+
+  /**
+   * 切换代码预览状态
+   */
+  private toggleCodePreview() {
+    this.eventBus.emit('code-preview:toggle');
+
+    // 添加点击反馈
+    const button = document.getElementById('floating-code-preview-btn');
     if (button) {
       button.classList.add('pulse');
       setTimeout(() => {

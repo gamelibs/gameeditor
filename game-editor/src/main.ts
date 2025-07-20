@@ -181,40 +181,39 @@ function setupTopbarMonitor() {
         const target = mutation.target as HTMLElement;
         const computedStyle = window.getComputedStyle(target);
 
-        // 检查关键样式属性
+        // 只在真正被隐藏时才报错，忽略正常的样式变化
         if (computedStyle.display === 'none' ||
             computedStyle.visibility === 'hidden' ||
             computedStyle.opacity === '0') {
           console.error('🚨 Topbar被隐藏!', {
             attributeName: mutation.attributeName,
-            oldValue: mutation.oldValue,
-            newValue: target.getAttribute(mutation.attributeName || ''),
             display: computedStyle.display,
             visibility: computedStyle.visibility,
-            opacity: computedStyle.opacity,
-            stackTrace: new Error().stack
+            opacity: computedStyle.opacity
           });
+
+          // 自动修复topbar可见性
+          ZIndexManager.fixTopbarVisibility();
         }
       }
 
       if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
         console.warn('🚨 Topbar子元素被移除!', {
-          removedNodes: Array.from(mutation.removedNodes).map(n => n.nodeName),
-          stackTrace: new Error().stack
+          removedNodes: Array.from(mutation.removedNodes).map(n => n.nodeName)
         });
       }
     });
   });
 
-  // 监控属性和子元素变化
+  // 监控属性和子元素变化，只监控关键属性
   observer.observe(topbar, {
     attributes: true,
-    attributeOldValue: true,
+    attributeFilter: ['style', 'class'], // 只监控样式相关属性
     childList: true,
-    subtree: true
+    subtree: false // 不监控子树，减少触发频率
   });
 
-  console.log('🔍 Topbar监控器已启动');
+  console.log('🔍 Topbar监控器已启动 (优化模式)');
 }
 
 /**
