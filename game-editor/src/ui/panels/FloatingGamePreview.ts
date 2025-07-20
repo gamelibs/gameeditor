@@ -74,6 +74,10 @@ export class FloatingGamePreview {
         display: flex !important;
       }
 
+      .floating-game-preview.visible {
+        display: flex !important;
+      }
+
 
 
       /* 简化的标题栏 - 只显示标题，无控制按钮 */
